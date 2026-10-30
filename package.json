@@ -1,0 +1,23 @@
+{
+  "name": "hr-system",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "db:generate": "prisma generate --schema prisma/schema.prisma",
+    "db:push": "prisma db push --schema prisma/schema.prisma --accept-data-loss",
+    "dev:api": "npm run dev --prefix apps/api",
+    "dev:dashboard": "npm run dev --prefix apps/dashboard",
+    "dev:bot": "npm run dev --prefix apps/bot",
+    "bot:install": "npm install --prefix apps/bot --no-fund --no-audit"
+  },
+  "devDependencies": {
+    "prisma": "^6.1.0",
+    "typescript": "^5.7.2"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.1.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

@@ -1,0 +1,481 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  // Local default: SQLite (no Docker). For production use postgresql + DATABASE_URL.
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ───────────────────────────────────────────────
+
+enum LeaveType {
+  HOURLY
+  DAILY
+}
+
+enum RequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum SalaryRequestType {
+  SALARY
+  ADVANCE
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum TaskStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum TaskScheduleKind {
+  ONCE
+  HOURLY
+  DAILY
+  WEEKLY
+  MONTHLY
+}
+
+enum PermissionEffect {
+  GRANT
+  DENY
+}
+
+enum NotificationChannel {
+  DASHBOARD
+  TELEGRAM
+}
+
+enum DeliveryStatus {
+  PENDING
+  PROCESSING
+  SENT
+  FAILED
+  SKIPPED
+}
+
+enum OutboxStatus {
+  PENDING
+  PROCESSING
+  DONE
+  FAILED
+}
+
+// ─── Auth & Users ────────────────────────────────────────
+
+model User {
+  id           String    @id @default(cuid())
+  email        String?   @unique
+  username     String    @unique
+  passwordHash String
+  isActive     Boolean   @default(true)
+  tokenVersion Int       @default(0) // bump to invalidate all access tokens
+  lastLoginAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  employee          Employee?
+  userRoles         UserRole[]
+  userPermissions   UserPermission[]
+  refreshTokens     RefreshToken[]
+  notifications     Notification[]
+  auditLogs         AuditLog[]          @relation("AuditActor")
+  createdTasks      Task[]              @relation("TaskCreator")
+  approvedLeaves    LeaveRequest[]      @relation("LeaveApprover")
+  approvedSalaries  SalaryRequest[]     @relation("SalaryApprover")
+  announcements     Announcement[]      @relation("AnnouncementAuthor")
+  authoredNotes     EmployeeNote[]      @relation("NoteAuthor")
+
+  @@index([isActive])
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  userAgent String?
+  ip        String?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("refresh_tokens")
+}
+
+model Employee {
+  id             String    @id @default(cuid())
+  userId         String    @unique
+  employeeCode   String?   @unique
+  firstName      String
+  lastName       String
+  phone          String?
+  department     String?
+  jobTitle       String?
+  hireDate       DateTime?
+  telegramUserId String?   @unique
+  telegramUsername String?
+  profileNote    String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  leaveRequests  LeaveRequest[]
+  salaryRequests SalaryRequest[]
+  bankAccounts   BankAccount[]
+  assignedTasks  Task[]          @relation("TaskAssignee")
+  notes          EmployeeNote[]
+
+  @@index([telegramUserId])
+  @@index([lastName, firstName])
+  @@map("employees")
+}
+
+// ─── RBAC ────────────────────────────────────────────────
+
+model Role {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  slug        String   @unique
+  description String?
+  isSystem    Boolean  @default(false) // Owner etc. — protected
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  rolePermissions RolePermission[]
+  userRoles       UserRole[]
+
+  @@map("roles")
+}
+
+model Permission {
+  id          String   @id @default(cuid())
+  module      String
+  action      String
+  key         String   @unique // e.g. leave.approve
+  description String?
+  createdAt   DateTime @default(now())
+
+  rolePermissions RolePermission[]
+  userPermissions UserPermission[]
+
+  @@unique([module, action])
+  @@map("permissions")
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+  createdAt    DateTime @default(now())
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+model UserRole {
+  userId     String
+  roleId     String
+  assignedAt DateTime @default(now())
+  assignedBy String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+  @@index([roleId])
+  @@map("user_roles")
+}
+
+model UserPermission {
+  userId       String
+  permissionId String
+  effect       PermissionEffect @default(GRANT)
+  createdAt    DateTime         @default(now())
+
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([userId, permissionId])
+  @@map("user_permissions")
+}
+
+// ─── Leave ───────────────────────────────────────────────
+
+model LeaveRequest {
+  id              String        @id @default(cuid())
+  employeeId      String
+  type            LeaveType
+  leaveDate       DateTime
+  startTime       String? // HH:mm for HOURLY
+  endTime         String?
+  reason          String?
+  status          RequestStatus @default(PENDING)
+  rejectionReason String?
+  reviewedById    String?
+  reviewedAt      DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  reviewedBy User?    @relation("LeaveApprover", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  @@index([employeeId, status])
+  @@index([status, createdAt])
+  @@index([leaveDate])
+  @@map("leave_requests")
+}
+
+// ─── Salary / Advance ────────────────────────────────────
+
+model SalaryRequest {
+  id              String            @id @default(cuid())
+  employeeId      String
+  type            SalaryRequestType
+  amount          Decimal
+  description     String?
+  status          RequestStatus     @default(PENDING)
+  rejectionReason String?
+  reviewedById    String?
+  reviewedAt      DateTime?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  reviewedBy User?    @relation("SalaryApprover", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  @@index([employeeId, status])
+  @@index([status, createdAt])
+  @@map("salary_requests")
+}
+
+// ─── Bank ────────────────────────────────────────────────
+
+model BankAccount {
+  id            String   @id @default(cuid())
+  employeeId    String
+  accountHolder String
+  accountNumber String? // store encrypted or masked at rest via app layer
+  iban          String // IR... encrypted at app layer when configured
+  bankName      String
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  employee Employee             @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  history  BankAccountHistory[]
+
+  @@index([employeeId])
+  @@map("bank_accounts")
+}
+
+model BankAccountHistory {
+  id            String   @id @default(cuid())
+  bankAccountId String
+  changedById   String?
+  previousValue Json
+  newValue      Json
+  createdAt     DateTime @default(now())
+
+  bankAccount BankAccount @relation(fields: [bankAccountId], references: [id], onDelete: Cascade)
+
+  @@index([bankAccountId, createdAt])
+  @@map("bank_account_history")
+}
+
+// ─── Tasks ───────────────────────────────────────────────
+
+model Task {
+  id                String           @id @default(cuid())
+  title             String
+  description       String?
+  priority          TaskPriority     @default(MEDIUM)
+  status            TaskStatus       @default(PENDING)
+  dueAt             DateTime?
+  scheduleKind      TaskScheduleKind @default(ONCE)
+  scheduleActive    Boolean          @default(true)
+  nextReminderAt    DateTime?
+  creatorId         String
+  assigneeId        String
+  completedAt       DateTime?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  creator   User                    @relation("TaskCreator", fields: [creatorId], references: [id], onDelete: Restrict)
+  assignee  Employee                @relation("TaskAssignee", fields: [assigneeId], references: [id], onDelete: Restrict)
+  history   TaskAssignmentHistory[]
+
+  @@index([assigneeId, status])
+  @@index([status, dueAt])
+  @@index([nextReminderAt])
+  @@map("tasks")
+}
+
+model TaskAssignmentHistory {
+  id           String   @id @default(cuid())
+  taskId       String
+  fromEmployee String?
+  toEmployee   String
+  changedById  String?
+  note         String?
+  createdAt    DateTime @default(now())
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([taskId, createdAt])
+  @@map("task_assignment_history")
+}
+
+// ─── Notifications ───────────────────────────────────────
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  body      String
+  eventType String
+  entityType String?
+  entityId  String?
+  isRead    Boolean  @default(false)
+  readAt    DateTime?
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  user       User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deliveries NotificationDelivery[]
+
+  @@index([userId, isRead, createdAt])
+  @@index([eventType, entityId])
+  @@map("notifications")
+}
+
+model NotificationDelivery {
+  id              String              @id @default(cuid())
+  notificationId  String
+  channel         NotificationChannel
+  status          DeliveryStatus      @default(PENDING)
+  idempotencyKey  String              @unique
+  attempts        Int                 @default(0)
+  lastError       String?
+  nextAttemptAt   DateTime            @default(now())
+  sentAt          DateTime?
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  notification Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+
+  @@index([status, nextAttemptAt])
+  @@map("notification_deliveries")
+}
+
+model OutboxEvent {
+  id          String       @id @default(cuid())
+  eventType   String
+  payload     Json
+  status      OutboxStatus @default(PENDING)
+  attempts    Int          @default(0)
+  lastError   String?
+  availableAt DateTime     @default(now())
+  processedAt DateTime?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([status, availableAt])
+  @@map("outbox_events")
+}
+
+// ─── Audit & Settings ────────────────────────────────────
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String?
+  action     String
+  module     String
+  entityType String?
+  entityId   String?
+  before     Json?
+  after      Json?
+  ip         String?
+  userAgent  String?
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  actor User? @relation("AuditActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([module, createdAt])
+  @@index([entityType, entityId])
+  @@index([actorId, createdAt])
+  @@map("audit_logs")
+}
+
+model SystemSetting {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt
+  updatedBy String?
+
+  @@map("system_settings")
+}
+
+// ─── CRM extras ──────────────────────────────────────────
+
+model Department {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("departments")
+}
+
+model Announcement {
+  id          String    @id @default(cuid())
+  title       String
+  body        String
+  audience    String    @default("ALL") // ALL | ROLE | ACTIVE_EMPLOYEES
+  roleId      String?
+  createdById String
+  isPinned    Boolean   @default(false)
+  publishAt   DateTime  @default(now())
+  expiresAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  createdBy User @relation("AnnouncementAuthor", fields: [createdById], references: [id], onDelete: Cascade)
+
+  @@index([publishAt, expiresAt])
+  @@map("announcements")
+}
+
+model EmployeeNote {
+  id         String   @id @default(cuid())
+  employeeId String
+  authorId   String
+  body       String
+  createdAt  DateTime @default(now())
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  author   User     @relation("NoteAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([employeeId, createdAt])
+  @@map("employee_notes")
+}

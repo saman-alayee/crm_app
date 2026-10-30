@@ -1,0 +1,61 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+.output/
+.nuxt/
+.nitro/
+.cache/
+
+# Local databases
+*.db
+*.db-journal
+backend/prisma/dev.db
+backend/prisma/dev.db-journal
+backend/prisma/*.db-wal
+backend/prisma/*.db-shm
+backend/prisma/*.db-journal
+
+# Archives (too large for git)
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.log
+
+# Environment (secrets — copy from *.env.example)
+.env
+.env.local
+.env.*.local
+backend/.env
+backend/.env.production
+frontend/.env.development
+frontend/.env.production
+deploy/**/.env
+
+# Deploy temp artifacts
+deploy/api-temp/dist/
+deploy/api-temp/node_modules/
+
+# Imported / uploaded media (local only)
+backend/uploads/wc/
+backend/uploads/*.jpg
+backend/uploads/*.jpeg
+backend/uploads/*.png
+backend/uploads/*.webp
+backend/uploads/*.gif
+
+# SSL private keys (never commit)
+deploy/ssl/

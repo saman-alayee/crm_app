@@ -1,0 +1,22 @@
+RewriteEngine On
+
+# Force HTTPS
+RewriteCond %{HTTPS} off
+RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+# Fix legacy apiBase trailing space (%20 or decoded space)
+RewriteCond %{THE_REQUEST} \s/api%20/(.+)\s [NC]
+RewriteRule ^ api/index.php?path=%1 [L,QSA,NE]
+RewriteCond %{REQUEST_URI} ^/api\s+/(.+)$ [NC]
+RewriteRule ^ api/index.php?path=%1 [L,QSA]
+
+# PHP API — require slash after "api"
+RewriteRule ^api/(.*)$ api/index.php?path=$1 [L,QSA]
+
+# Uploads from backend storage
+RewriteRule ^uploads/(.*)$ api/serve-upload.php?f=$1 [L,QSA]
+
+# SPA fallback
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule . /index.html [L]

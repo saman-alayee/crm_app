@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ورود | پنل منابع انسانی</title>
+  <style>
+    @font-face { font-family:'IRANSansX'; font-weight:400; font-display:swap; src:url('/fonts/IRANSansXFaNum-Regular.woff2') format('woff2'); }
+    @font-face { font-family:'IRANSansX'; font-weight:500; font-display:swap; src:url('/fonts/IRANSansXFaNum-Medium.woff2') format('woff2'); }
+    @font-face { font-family:'IRANSansX'; font-weight:700; font-display:swap; src:url('/fonts/IRANSansXFaNum-Bold.woff2') format('woff2'); }
+    body { margin:0; font-family:'IRANSansX',Tahoma,sans-serif; min-height:100vh; display:flex; align-items:center; justify-content:center;
+      background:#f6f1ea; color:#3c322b; }
+    .card { width:100%; max-width:420px; background:#fff; border-radius:24px; padding:28px; box-shadow:0 2px 12px rgba(0,0,0,.06); border:1px solid #f3ebe3; }
+    h1 { margin:8px 0 4px; font-size:20px; }
+    p { margin:0 0 16px; color:#8c7f72; font-size:13px; }
+    label { display:block; margin:12px 0 6px; font-size:12px; color:#5c4638; }
+    input { width:100%; box-sizing:border-box; padding:12px; border:1px solid #e6d8cb; border-radius:12px; font-size:14px; font-family:inherit; }
+    input:focus { outline:none; border-color:#6f5644; box-shadow:0 0 0 3px #f3ebe3; }
+    button { width:100%; margin-top:18px; padding:12px; border:0; border-radius:12px; background:#6f5644; color:#fff; font-size:14px; cursor:pointer; font-family:inherit; }
+    button:hover { background:#5c4638; }
+    .err { background:#fef2f2; color:#dc2626; padding:10px; border-radius:12px; font-size:13px; display:none; }
+    .ok { display:none; margin-top:14px; background:#ecfdf5; color:#047857; padding:12px; border-radius:12px; font-size:13px; }
+    .brand { color:#6f5644; font-size:13px; font-weight:700; }
+  </style>
+</head>
+<body>
+  <form class="card" id="form">
+    <div class="brand">HR Management</div>
+    <h1>ورود به پنل مدیریت</h1>
+    <p>نام کاربری و رمز عبور را وارد کنید</p>
+    <div class="err" id="err"></div>
+    <label>نام کاربری</label>
+    <input id="username" value="owner" autocomplete="username" required />
+    <label>رمز عبور</label>
+    <input id="password" type="password" autocomplete="current-password" required />
+    <button type="submit">ورود</button>
+    <div class="ok" id="ok"></div>
+  </form>
+  <script>
+    const API = 'http://127.0.0.1:4000/api/v1';
+    const form = document.getElementById('form');
+    const err = document.getElementById('err');
+    const ok = document.getElementById('ok');
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      err.style.display = 'none';
+      ok.style.display = 'none';
+      try {
+        const res = await fetch(API + '/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            username: document.getElementById('username').value.trim(),
+            password: document.getElementById('password').value,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok || !data.success) throw new Error(data.message || 'ورود ناموفق');
+        localStorage.setItem('hr-access', data.data.accessToken);
+        localStorage.setItem('hr-refresh', data.data.refreshToken);
+        const me = data.data.user;
+        const name = me.employee ? (me.employee.firstName + ' ' + me.employee.lastName) : me.username;
+        const dash = await fetch(API + '/dashboard/summary', {
+          headers: { Authorization: 'Bearer ' + data.data.accessToken },
+        }).then(r => r.json());
+        ok.style.display = 'block';
+        ok.innerHTML = 'ورود موفق: <b>' + name + '</b><br/>نقش‌ها: ' +
+          (data.data.roles || []).map(r => r.name).join('، ') +
+          '<br/>کارکنان: ' + (dash.data?.employeesTotal ?? '-') +
+          ' | مرخصی در انتظار: ' + (dash.data?.leavePending ?? '-') +
+          '<br/><br/><a href="http://127.0.0.1:3000/">باز کردن داشبورد Nuxt</a>';
+        location.href = '/app.html';
+      } catch (ex) {
+        err.style.display = 'block';
+        err.textContent = ex.message || String(ex);
+      }
+    });
+  </script>
+</body>
+</html>

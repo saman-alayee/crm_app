@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>داشبورد | منابع انسانی</title>
+  <style>
+    @font-face { font-family:'IRANSansX'; font-weight:400; font-display:swap; src:url('/fonts/IRANSansXFaNum-Regular.woff2') format('woff2'); }
+    @font-face { font-family:'IRANSansX'; font-weight:700; font-display:swap; src:url('/fonts/IRANSansXFaNum-Bold.woff2') format('woff2'); }
+    body { margin:0; font-family:'IRANSansX',Tahoma,sans-serif; background:#f6f1ea; color:#3c322b; }
+    header { background:#fff; border-bottom:1px solid #f3ebe3; padding:16px 24px; display:flex; justify-content:space-between; align-items:center; }
+    main { padding:24px; max-width:1100px; margin:0 auto; }
+    .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:12px; }
+    .card { background:#fff; border-radius:16px; padding:16px; box-shadow:0 2px 12px rgba(0,0,0,.06); }
+    .muted { color:#8c7f72; font-size:13px; }
+    button { border:0; background:#fef2f2; color:#b91c1c; padding:8px 12px; border-radius:10px; cursor:pointer; font-family:inherit; }
+    .val { font-size:28px; font-weight:700; margin-top:8px; color:#4a382d; }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <div class="muted">سیستم منابع انسانی</div>
+      <strong id="name">...</strong>
+    </div>
+    <button id="logout">خروج</button>
+  </header>
+  <main>
+    <h2>داشبورد مدیریت</h2>
+    <p class="muted" id="roles"></p>
+    <div class="grid" id="cards"></div>
+  </main>
+  <script>
+    const API = 'http://127.0.0.1:4000/api/v1';
+    const token = localStorage.getItem('hr-access');
+    if (!token) location.href = '/login.html';
+    async function load() {
+      const me = await fetch(API + '/auth/me', { headers: { Authorization: 'Bearer ' + token }}).then(r => r.json());
+      if (!me.success) { location.href = '/login.html'; return; }
+      const u = me.data.user;
+      document.getElementById('name').textContent = u.employee ? (u.employee.firstName + ' ' + u.employee.lastName) : u.username;
+      document.getElementById('roles').textContent = 'نقش‌ها: ' + me.data.roles.map(r => r.name).join('، ');
+      const dash = await fetch(API + '/dashboard/summary', { headers: { Authorization: 'Bearer ' + token }}).then(r => r.json());
+      const s = dash.data;
+      const items = [
+        ['کل کارکنان', s.employeesTotal],
+        ['فعال', s.employeesActive],
+        ['غیرفعال', s.employeesInactive],
+        ['مرخصی در انتظار', s.leavePending],
+        ['درخواست مالی', s.salaryPending],
+        ['وظایف باز', s.tasksOpen],
+        ['عقب‌افتاده', s.tasksOverdue],
+      ];
+      document.getElementById('cards').innerHTML = items.map((it) =>
+        `<div class="card"><div class="muted">${it[0]}</div><div class="val">${Number(it[1]).toLocaleString('fa-IR')}</div></div>`
+      ).join('');
+    }
+    document.getElementById('logout').onclick = () => {
+      localStorage.clear();
+      location.href = '/login.html';
+    };
+    load().catch(() => location.href = '/login.html');
+  </script>
+</body>
+</html>
