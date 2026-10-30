@@ -34,27 +34,82 @@ const { loading, error } = usePageLoad(async () => {
 const cards = computed(() => {
   const s = summary.value;
   if (!s) return [];
-  return [
-    { label: 'کل کارکنان', value: s.employeesTotal, icon: 'lucide:users', to: '/employees', tone: 'neutral' },
-    { label: 'فعال', value: s.employeesActive, icon: 'lucide:user-check', to: '/employees', tone: 'ok' },
-    { label: 'دپارتمان‌ها', value: s.departmentsTotal, icon: 'lucide:building-2', to: '/departments', tone: 'neutral' },
-    { label: 'مرخصی', value: s.leavePending, icon: 'lucide:calendar-days', to: '/leave', tone: 'warn' },
-    { label: 'مالی', value: s.salaryPending, icon: 'lucide:wallet', to: '/salary', tone: 'warn' },
-    { label: 'وظایف باز', value: s.tasksOpen, icon: 'lucide:list-checks', to: '/tasks', tone: 'neutral' },
-    { label: 'عقب‌افتاده', value: s.tasksOverdue, icon: 'lucide:alarm-clock', to: '/tasks', tone: 'danger' },
+  const all = [
+    {
+      label: 'کل کارکنان',
+      value: s.employeesTotal,
+      icon: 'lucide:users',
+      to: '/employees',
+      tone: 'neutral',
+      permission: 'employees.view',
+    },
+    {
+      label: 'فعال',
+      value: s.employeesActive,
+      icon: 'lucide:user-check',
+      to: '/employees',
+      tone: 'ok',
+      permission: 'employees.view',
+    },
+    {
+      label: 'دپارتمان‌ها',
+      value: s.departmentsTotal,
+      icon: 'lucide:building-2',
+      to: '/departments',
+      tone: 'neutral',
+      permission: 'departments.view',
+    },
+    {
+      label: auth.can('leave.approve') ? 'مرخصی در انتظار' : 'مرخصی من',
+      value: s.leavePending,
+      icon: 'lucide:calendar-days',
+      to: '/leave',
+      tone: 'warn',
+      permission: 'leave.view',
+    },
+    {
+      label: auth.can('salary.approve') ? 'مالی در انتظار' : 'مالی من',
+      value: s.salaryPending,
+      icon: 'lucide:wallet',
+      to: '/salary',
+      tone: 'warn',
+      permission: 'salary.view',
+    },
+    {
+      label: 'وظایف باز',
+      value: s.tasksOpen,
+      icon: 'lucide:list-checks',
+      to: '/tasks',
+      tone: 'neutral',
+      permission: 'tasks.view',
+    },
+    {
+      label: 'عقب‌افتاده',
+      value: s.tasksOverdue,
+      icon: 'lucide:alarm-clock',
+      to: '/tasks',
+      tone: 'danger',
+      permission: 'tasks.view',
+    },
   ];
+  return all.filter((card) => auth.can(card.permission));
 });
 
-const quickLinks = [
+const quickLinks = computed(() => [
   { to: '/employees', label: 'کارکنان', desc: 'پرسنل و پرونده', icon: 'lucide:users', permission: 'employees.view' },
   { to: '/announcements', label: 'اطلاعیه‌ها', desc: 'اعلان سازمانی', icon: 'lucide:megaphone', permission: 'announcements.view' },
   { to: '/departments', label: 'دپارتمان‌ها', desc: 'ساختار سازمان', icon: 'lucide:building-2', permission: 'departments.view' },
-  { to: '/leave', label: 'مرخصی', desc: 'تأیید درخواست‌ها', icon: 'lucide:calendar-days', permission: 'leave.view' },
+  {
+    to: '/leave',
+    label: 'مرخصی',
+    desc: auth.can('leave.approve') ? 'تأیید درخواست‌ها' : 'درخواست و پیگیری',
+    icon: 'lucide:calendar-days',
+    permission: 'leave.view',
+  },
   { to: '/tasks', label: 'وظایف', desc: 'پیگیری کارها', icon: 'lucide:list-checks', permission: 'tasks.view' },
-  { to: '/backup', label: 'بکاپ', desc: 'نسخه دیتابیس', icon: 'lucide:database', permission: 'backup.export' },
-  { to: '/settings', label: 'تنظیمات', desc: 'تم و ظاهر', icon: 'lucide:settings', permission: 'settings.view' },
+  { to: '/settings', label: 'تنظیمات', desc: 'تم، قفل و بکاپ', icon: 'lucide:settings', permission: 'settings.view' },
   { to: '/reports', label: 'گزارش‌ها', desc: 'آمار خروجی', icon: 'lucide:bar-chart-3', permission: 'reports.view' },
-];
+]);
 
 useHead({ title: 'داشبورد - پنل مدیریت' });
 </script>
@@ -106,7 +161,14 @@ useHead({ title: 'داشبورد - پنل مدیریت' });
         <section class="panel dash-rise hover-soft" style="--i: 8">
           <div class="panel__head">
             <h2 class="panel__title">اطلاعیه‌ها</h2>
-            <NuxtLink to="/announcements" class="panel__link hover-underline">مدیریت</NuxtLink>
+            <NuxtLink
+              v-if="auth.can('announcements.create') || auth.can('announcements.edit')"
+              to="/announcements"
+              class="panel__link hover-underline"
+            >
+              مدیریت
+            </NuxtLink>
+            <NuxtLink v-else to="/announcements" class="panel__link hover-underline">مشاهده</NuxtLink>
           </div>
           <EmptyState
             v-if="!summary.announcements?.length"
@@ -127,7 +189,7 @@ useHead({ title: 'داشبورد - پنل مدیریت' });
           </ul>
         </section>
 
-        <section class="panel dash-rise hover-soft" style="--i: 9">
+        <section v-if="auth.can('employees.view')" class="panel dash-rise hover-soft" style="--i: 9">
           <div class="panel__head">
             <h2 class="panel__title">سالگرد استخدام</h2>
           </div>
@@ -153,7 +215,7 @@ useHead({ title: 'داشبورد - پنل مدیریت' });
         <div class="quick">
           <NuxtLink
             v-for="(link, idx) in quickLinks.filter((l) => auth.can(l.permission))"
-            :key="link.to"
+            :key="`${link.to}-${link.desc}`"
             :to="link.to"
             class="quick__card hover-magnetic"
             :style="{ '--i': idx }"

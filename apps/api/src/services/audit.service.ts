@@ -27,3 +27,5 @@ export async function writeAudit(input: {
     },
   });
 }
+
+export { purgeOldAuditLogs, startAuditRetentionJob } from './audit-retention.service.js';

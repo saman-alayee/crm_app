@@ -1,8 +1,11 @@
 <script setup lang="ts">
+import { rules } from '~/composables/useFormValidation';
+
 const { api } = useApi();
 const auth = useAuthStore();
 const toast = useToast();
 const { formatDate } = useFormat();
+const { errors, clearField, validate } = useFormValidation();
 
 const items = ref<any[]>([]);
 const roles = ref<any[]>([]);
@@ -37,6 +40,17 @@ async function load() {
 }
 
 async function submit() {
+  const schema: Record<string, ReturnType<typeof rules.required>[]> = {
+    title: [rules.required('عنوان الزامی است'), rules.minLength(2), rules.maxLength(120)],
+    body: [rules.required('متن پیام الزامی است'), rules.minLength(3)],
+  };
+  if (form.audience === 'ROLE') {
+    schema.roleId = [rules.required('نقش مخاطب را انتخاب کنید')];
+  }
+  if (!validate({ ...form }, schema)) {
+    toast.error('لطفاً خطاهای فرم را برطرف کنید');
+    return;
+  }
   try {
     if (broadcastMode.value) {
       const res = await api<{ success: boolean; data: { recipients: number }; message?: string }>(
@@ -129,11 +143,26 @@ useHead({ title: 'اطلاعیه‌ها و اعلان مدیریت' });
       <div class="grid gap-3 md:grid-cols-2">
         <div class="md:col-span-2">
           <label class="field-label">عنوان</label>
-          <input v-model="form.title" class="input-field" placeholder="مثال: تعطیلی پنجشنبه" />
+          <input
+            v-model="form.title"
+            class="input-field"
+            :class="{ 'input-invalid': errors.title }"
+            placeholder="مثال: تعطیلی پنجشنبه"
+            maxlength="120"
+            @input="clearField('title')"
+          />
+          <UiFieldError :message="errors.title" />
         </div>
         <div class="md:col-span-2">
           <label class="field-label">متن</label>
-          <textarea v-model="form.body" class="input-field min-h-[100px]" placeholder="جزئیات پیام برای کارکنان…" />
+          <textarea
+            v-model="form.body"
+            class="input-field min-h-[100px]"
+            :class="{ 'input-invalid': errors.body }"
+            placeholder="جزئیات پیام برای کارکنان…"
+            @input="clearField('body')"
+          />
+          <UiFieldError :message="errors.body" />
         </div>
         <div>
           <label class="field-label">مخاطب</label>
@@ -146,10 +175,16 @@ useHead({ title: 'اطلاعیه‌ها و اعلان مدیریت' });
         </div>
         <div v-if="form.audience === 'ROLE'">
           <label class="field-label">نقش</label>
-          <select v-model="form.roleId" class="input-field">
+          <select
+            v-model="form.roleId"
+            class="input-field"
+            :class="{ 'input-invalid': errors.roleId }"
+            @change="clearField('roleId')"
+          >
             <option value="">انتخاب نقش</option>
             <option v-for="r in roles" :key="r.id" :value="r.id">{{ r.name }}</option>
           </select>
+          <UiFieldError :message="errors.roleId" />
         </div>
         <label v-if="!broadcastMode" class="flex items-center gap-2 text-sm md:col-span-2">
           <input v-model="form.isPinned" type="checkbox" /> سنجاق‌شده (بالای لیست بماند)

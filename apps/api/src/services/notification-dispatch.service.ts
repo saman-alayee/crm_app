@@ -2,6 +2,7 @@ import { prisma } from '../db/prisma.js';
 import { resolveUserPermissions } from './rbac.service.js';
 import type { PermissionKey } from '../shared/index.js';
 import { isTelegramConfigured, sendTelegramMessage } from './telegram.service.js';
+import { emitNotificationNew } from './realtime.service.js';
 
 export async function notifyUsers(input: {
   userIds: string[];
@@ -30,6 +31,20 @@ export async function notifyUsers(input: {
     });
 
     let notificationId: string | null = null;
+    let createdFresh = false;
+    let createdNotification:
+      | {
+          id: string;
+          title: string;
+          body: string;
+          eventType: string;
+          entityType: string | null;
+          entityId: string | null;
+          isRead: boolean;
+          createdAt: Date;
+        }
+      | null = null;
+
     if (!existingDash) {
       const notification = await prisma.notification.create({
         data: {
@@ -43,6 +58,8 @@ export async function notifyUsers(input: {
         },
       });
       notificationId = notification.id;
+      createdFresh = true;
+      createdNotification = notification;
       await prisma.notificationDelivery.create({
         data: {
           notificationId: notification.id,
@@ -55,6 +72,10 @@ export async function notifyUsers(input: {
       });
     } else {
       notificationId = existingDash.notificationId;
+    }
+
+    if (createdFresh && createdNotification) {
+      void emitNotificationNew(userId, createdNotification);
     }
 
     // Per-user Telegram push when account is linked

@@ -69,9 +69,8 @@ export function formatJalaliDate(
   const day = toPersianDigits(jalali.date());
   const year = toPersianDigits(jalali.year());
 
-  let text = options.short
-    ? `${day} ${month.slice(0, 3)} ${year}`
-    : `${day} ${month} ${year}`;
+  // Persian month names must stay whole — slice(0,3) turns «آبان» into «آبا»
+  let text = `${day} ${month} ${year}`;
 
   if (options.withTime) {
     const hours = toPersianDigits(source.format('HH'));
@@ -101,9 +100,48 @@ export function compareGregorianIso(a: string, b: string): number {
   return a.localeCompare(b);
 }
 
-function toPersianDigits(value: number | string): string {
+export function toPersianDigits(value: number | string): string {
   const persianDigits = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
-  return String(value).replace(/\d/g, (d) => persianDigits[parseInt(d, 10)]);
+  return String(value).replace(/\d/g, (d) => persianDigits[Number(d)]);
+}
+
+export function toEnglishDigits(value: string): string {
+  return String(value)
+    .replace(/[۰-۹]/g, (d) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d)))
+    .replace(/[٠-٩]/g, (d) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)));
+}
+
+/** Parse typed display like ۱۴۰۳/۰۱/۱۵ or 1403/1/15 → gregorian ISO or null */
+export function parseJalaliDisplayToIso(raw: string): string | null {
+  const normalized = toEnglishDigits(raw).trim().replace(/-/g, '/');
+  const m = normalized.match(/^(\d{3,4})\/(\d{1,2})\/(\d{1,2})$/);
+  if (!m) return null;
+  const year = Number(m[1]);
+  const month = Number(m[2]);
+  const day = Number(m[3]);
+  if (year < 1300 || year > 1500 || month < 1 || month > 12 || day < 1 || day > 31) return null;
+  const maxDay = getJalaliMonthLength(year, month);
+  if (day > maxDay) return null;
+  const iso = jalaliToGregorianIso(year, month, day);
+  // round-trip check
+  const back = gregorianIsoToJalali(iso);
+  if (back.year !== year || back.month !== month || back.day !== day) return null;
+  return iso;
+}
+
+export function combineDateAndTime(isoDate: string, timeHm: string): string {
+  const t = timeHm && /^\d{2}:\d{2}/.test(timeHm) ? timeHm.slice(0, 5) : '00:00';
+  return `${isoDate.slice(0, 10)}T${t}:00`;
+}
+
+export function splitDateTimeLocal(value: string | null | undefined): { date: string; time: string } {
+  if (!value) return { date: '', time: '' };
+  const normalized = value.includes('T') ? value : value.replace(' ', 'T');
+  const [datePart, timePart = ''] = normalized.split('T');
+  return {
+    date: datePart.slice(0, 10),
+    time: timePart ? timePart.slice(0, 5) : '',
+  };
 }
 
 export { dayjs };

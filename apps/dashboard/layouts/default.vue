@@ -2,45 +2,35 @@
 const auth = useAuthStore();
 const theme = useTheme();
 const route = useRoute();
+const notif = useNotificationsStore();
 const mobileNavOpen = ref(false);
-const unread = ref(0);
 const panelLocked = ref(false);
 const { api } = useApi();
+const unread = computed(() => notif.unread);
 
 const allNav = [
-  { to: '/', label: 'داشبورد', hint: 'خلاصه وضعیت', icon: 'lucide:layout-dashboard', exact: true, permission: 'dashboard.view' },
-  { to: '/employees', label: 'کارکنان', hint: 'پرسنل و پرونده', icon: 'lucide:users', permission: 'employees.view' },
-  { to: '/departments', label: 'دپارتمان‌ها', hint: 'واحدهای سازمان', icon: 'lucide:building-2', permission: 'departments.view' },
-  { to: '/leave', label: 'مرخصی', hint: 'درخواست و تأیید', icon: 'lucide:calendar-days', permission: 'leave.view' },
-  { to: '/salary', label: 'حقوق و مساعده', hint: 'درخواست مالی', icon: 'lucide:wallet', permission: 'salary.view' },
-  { to: '/bank', label: 'حساب بانکی', hint: 'شبا و بانک', icon: 'lucide:landmark', permission: 'bank.view' },
-  { to: '/tasks', label: 'وظایف', hint: 'کارهای محول‌شده', icon: 'lucide:list-checks', permission: 'tasks.view' },
-  { to: '/announcements', label: 'اطلاعیه‌ها', hint: 'پیام سازمانی', icon: 'lucide:megaphone', permission: 'announcements.view' },
-  { to: '/roles', label: 'دسترسی‌ها', hint: 'نقش و مجوز', icon: 'lucide:shield', permission: 'roles.view' },
-  { to: '/notifications', label: 'اعلان‌ها', hint: 'پیام‌های شما', icon: 'lucide:bell', permission: 'notifications.view' },
-  { to: '/reports', label: 'گزارش‌ها', hint: 'آمار کارکنان', icon: 'lucide:bar-chart-3', permission: 'reports.view' },
-  { to: '/audit', label: 'تاریخچه', hint: 'لاگ تغییرات', icon: 'lucide:scroll-text', permission: 'audit.view' },
-  { to: '/backup', label: 'بکاپ', hint: 'پشتیبان دیتابیس', icon: 'lucide:database', permission: 'backup.export' },
-  { to: '/settings', label: 'تنظیمات', hint: 'ظاهر و قفل', icon: 'lucide:settings', permission: 'settings.view' },
+  { to: '/', label: 'داشبورد', icon: 'lucide:layout-dashboard', exact: true, permission: 'dashboard.view' },
+  { to: '/employees', label: 'کارکنان', icon: 'lucide:users', permission: 'employees.view' },
+  { to: '/departments', label: 'دپارتمان‌ها', icon: 'lucide:building-2', permission: 'departments.view' },
+  { to: '/leave', label: 'مرخصی', icon: 'lucide:calendar-days', permission: 'leave.view' },
+  { to: '/salary', label: 'حقوق و مساعده', icon: 'lucide:wallet', permission: 'salary.view' },
+  { to: '/bank', label: 'حساب بانکی', icon: 'lucide:landmark', permission: 'bank.view' },
+  { to: '/tasks', label: 'وظایف', icon: 'lucide:list-checks', permission: 'tasks.view' },
+  { to: '/announcements', label: 'اطلاعیه‌ها', icon: 'lucide:megaphone', permission: 'announcements.view' },
+  { to: '/roles', label: 'دسترسی‌ها', icon: 'lucide:shield', permission: 'roles.view' },
+  { to: '/notifications', label: 'اعلان‌ها', icon: 'lucide:bell', permission: 'notifications.view' },
+  { to: '/reports', label: 'گزارش‌ها', icon: 'lucide:bar-chart-3', permission: 'reports.view' },
+  { to: '/audit', label: 'تاریخچه', icon: 'lucide:scroll-text', permission: 'audit.view' },
+  { to: '/settings', label: 'تنظیمات', icon: 'lucide:settings', permission: 'settings.view' },
 ];
 
 const nav = computed(() => allNav.filter((item) => auth.can(item.permission)));
 
 async function onLogout() {
-  await auth.logout();
+  // Navigate first so cleared identity never flashes on protected pages
+  const done = auth.logout();
   await navigateTo('/login');
-}
-
-async function refreshUnread() {
-  if (!auth.can('notifications.view')) return;
-  try {
-    const res = await api<{ success: boolean; data: { unreadCount: number } }>('/notifications/unread-count', {
-      cacheTtlMs: 8_000,
-    });
-    unread.value = res.data.unreadCount;
-  } catch {
-    /* ignore */
-  }
+  await done;
 }
 
 async function refreshPanelLock() {
@@ -58,19 +48,10 @@ async function refreshPanelLock() {
   }
 }
 
-let unreadTimer: ReturnType<typeof setTimeout> | null = null;
-function scheduleUnreadRefresh() {
-  if (unreadTimer) return;
-  unreadTimer = setTimeout(() => {
-    unreadTimer = null;
-    void refreshUnread();
-  }, 1200);
-}
-
 onMounted(() => {
   auth.hydrate();
   void auth.fetchMe().then(() => {
-    void refreshUnread();
+    void notif.fetchUnread();
     void refreshPanelLock();
   });
 });
@@ -79,8 +60,6 @@ watch(
   () => route.path,
   () => {
     mobileNavOpen.value = false;
-    // Don't hammer API on every click — slight debounce is enough for badge
-    scheduleUnreadRefresh();
   }
 );
 </script>
@@ -105,7 +84,6 @@ watch(
           :key="item.to"
           :to="item.to"
           class="admin-nav-link"
-          :title="item.hint"
           :class="{
             'admin-nav-active': item.exact
               ? route.path === item.to
@@ -113,10 +91,7 @@ watch(
           }"
         >
           <AppIcon :name="item.icon" size="md" class="shrink-0 opacity-80" />
-          <span class="flex-1 min-w-0">
-            <span class="block truncate">{{ item.label }}</span>
-            <span class="block truncate text-[10px] font-normal opacity-70">{{ item.hint }}</span>
-          </span>
+          <span class="flex-1 truncate">{{ item.label }}</span>
           <span
             v-if="item.to === '/notifications' && unread > 0"
             class="flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white"
@@ -146,7 +121,6 @@ watch(
               :key="item.to"
               :to="item.to"
               class="admin-nav-link"
-              :title="item.hint"
               :class="{
                 'admin-nav-active': item.exact
                   ? route.path === item.to
@@ -154,10 +128,7 @@ watch(
               }"
             >
               <AppIcon :name="item.icon" size="md" class="shrink-0 opacity-80" />
-              <span class="flex-1 min-w-0">
-                <span class="block truncate">{{ item.label }}</span>
-                <span class="block truncate text-[10px] font-normal opacity-70">{{ item.hint }}</span>
-              </span>
+              <span class="flex-1 truncate">{{ item.label }}</span>
             </NuxtLink>
           </nav>
         </aside>
@@ -196,8 +167,15 @@ watch(
               v-if="auth.can('notifications.view')"
               to="/notifications"
               class="icon-chip relative"
+              :title="notif.live ? 'اعلان‌ها — آنلاین' : 'اعلان‌ها'"
             >
               <AppIcon name="lucide:bell" size="md" :class="unread > 0 ? 'text-red-500' : ''" />
+              <span
+                v-if="notif.live"
+                class="absolute -bottom-0.5 -start-0.5 h-2 w-2 rounded-full bg-emerald-500"
+                style="box-shadow: 0 0 0 2px var(--hr-card)"
+                aria-hidden="true"
+              />
               <span
                 v-if="unread > 0"
                 class="absolute -top-0.5 -end-0.5 flex h-[1.1rem] min-w-[1.1rem] items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white"

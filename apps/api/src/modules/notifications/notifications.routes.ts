@@ -3,6 +3,7 @@ import { authenticate, requirePermission } from '../../middleware/auth.js';
 import { asyncHandler, successResponse, AppError } from '../../utils/errors.js';
 import { prisma } from '../../db/prisma.js';
 import { parsePagination, paginationMeta } from '../../utils/pagination.js';
+import { emitUnreadSync } from '../../services/realtime.service.js';
 
 export const notificationsRouter = Router();
 notificationsRouter.use(authenticate, requirePermission('notifications.view'));
@@ -51,6 +52,7 @@ notificationsRouter.post(
       where: { id: row.id },
       data: { isRead: true, readAt: new Date() },
     });
+    void emitUnreadSync(req.user!.id, { readId: updated.id });
     successResponse(res, updated);
   })
 );
@@ -62,6 +64,7 @@ notificationsRouter.post(
       where: { userId: req.user!.id, isRead: false },
       data: { isRead: true, readAt: new Date() },
     });
+    void emitUnreadSync(req.user!.id, { readAll: true });
     successResponse(res, { ok: true });
   })
 );

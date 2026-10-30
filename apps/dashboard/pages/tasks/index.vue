@@ -1,8 +1,11 @@
 <script setup lang="ts">
+import { rules } from '~/composables/useFormValidation';
+
 const { api } = useApi();
 const auth = useAuthStore();
 const toast = useToast();
 const { formatShortDate } = useFormat();
+const { errors, clearField, validate } = useFormValidation();
 
 const loading = ref(true);
 const items = ref<any[]>([]);
@@ -39,12 +42,24 @@ async function load() {
 }
 
 async function create() {
+  if (
+    !validate(
+      { ...form },
+      {
+        title: [rules.required('عنوان وظیفه الزامی است'), rules.minLength(2), rules.maxLength(120)],
+        assigneeId: [rules.required('مسئول را انتخاب کنید')],
+      },
+    )
+  ) {
+    toast.error('لطفاً خطاهای فرم را برطرف کنید');
+    return;
+  }
   try {
     await api('/tasks', {
       method: 'POST',
       body: {
-        title: form.title,
-        description: form.description,
+        title: form.title.trim(),
+        description: form.description.trim(),
         priority: form.priority,
         assigneeId: form.assigneeId,
         dueAt: form.dueAt || undefined,
@@ -53,6 +68,9 @@ async function create() {
     });
     toast.success('وظیفه ایجاد شد');
     showForm.value = false;
+    form.title = '';
+    form.description = '';
+    form.dueAt = '';
     await load();
   } catch (e: any) {
     toast.error(e?.data?.message || 'خطا');
@@ -113,19 +131,34 @@ useHead({ title: 'وظایف' });
       <div class="grid gap-3 md:grid-cols-2">
         <div class="md:col-span-2">
           <label class="field-label">عنوان</label>
-          <input v-model="form.title" class="input-field" placeholder="مثال: چک موجودی قفسه" />
+          <input
+            v-model="form.title"
+            class="input-field"
+            :class="{ 'input-invalid': errors.title }"
+            placeholder="مثال: چک موجودی قفسه"
+            maxlength="120"
+            @input="clearField('title')"
+          />
+          <UiFieldError :message="errors.title" />
         </div>
         <div class="md:col-span-2">
           <label class="field-label">توضیح</label>
-          <input v-model="form.description" class="input-field" placeholder="جزئیات اختیاری برای مسئول" />
+          <input v-model="form.description" class="input-field" placeholder="جزئیات اختیاری برای مسئول" maxlength="500" />
         </div>
         <div>
           <label class="field-label">مسئول</label>
-          <select v-model="form.assigneeId" class="input-field">
+          <select
+            v-model="form.assigneeId"
+            class="input-field"
+            :class="{ 'input-invalid': errors.assigneeId }"
+            @change="clearField('assigneeId')"
+          >
+            <option value="">— انتخاب مسئول —</option>
             <option v-for="e in employees" :key="e.id" :value="e.id">
               {{ e.firstName }} {{ e.lastName }}
             </option>
           </select>
+          <UiFieldError :message="errors.assigneeId" />
           <UiFieldHint text="اگر لیست خالی است، اول کارکنان را ثبت کنید." />
         </div>
         <div>
@@ -138,9 +171,9 @@ useHead({ title: 'وظایف' });
           </select>
         </div>
         <div>
-          <label class="field-label">مهلت</label>
-          <input v-model="form.dueAt" type="datetime-local" class="input-field" />
-          <UiFieldHint text="اختیاری — برای کارهای زمان‌دار پر کنید." />
+          <label class="field-label">مهلت (شمسی)</label>
+          <JalaliDateTimePicker v-model="form.dueAt" />
+          <UiFieldHint text="اختیاری — تاریخ شمسی + ساعت." />
         </div>
         <div>
           <label class="field-label">زمان‌بندی</label>

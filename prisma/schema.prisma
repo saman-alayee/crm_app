@@ -420,6 +420,7 @@ model AuditLog {
 
   actor User? @relation("AuditActor", fields: [actorId], references: [id], onDelete: SetNull)
 
+  @@index([createdAt])
   @@index([module, createdAt])
   @@index([entityType, entityId])
   @@index([actorId, createdAt])

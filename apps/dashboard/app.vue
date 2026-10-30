@@ -10,7 +10,7 @@ const auth = useAuthStore();
       <NuxtPage
         :key="auth.sessionEpoch"
         :keepalive="{ max: 12 }"
-        :transition="{ name: 'admin-page', mode: 'default' }"
+        :transition="{ name: 'admin-page', mode: 'out-in' }"
       />
     </NuxtLayout>
     <AppToast />

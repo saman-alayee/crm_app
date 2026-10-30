@@ -171,6 +171,138 @@
     color: var(--hr-muted);
   }
 
+  .field-error {
+    margin: 0.35rem 0 0;
+    font-size: 0.72rem;
+    line-height: 1.45;
+    color: #dc2626;
+  }
+  html.dark .field-error {
+    color: #f87171;
+  }
+  .input-invalid {
+    border-color: color-mix(in srgb, #dc2626 70%, var(--hr-border)) !important;
+    box-shadow: 0 0 0 3px color-mix(in srgb, #dc2626 14%, transparent);
+  }
+
+  .jdp {
+    position: relative;
+  }
+  .jdp__control {
+    position: relative;
+  }
+  .jdp__input {
+    padding-inline-end: 2.6rem;
+  }
+  .jdp__icon-btn {
+    position: absolute;
+    inset-inline-end: 0.35rem;
+    top: 50%;
+    transform: translateY(-50%);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    border: 0;
+    border-radius: 0.55rem;
+    background: transparent;
+    color: var(--hr-muted);
+    cursor: pointer;
+  }
+  .jdp__icon-btn:hover {
+    color: var(--hr-primary-700);
+    background: var(--hr-primary-50);
+  }
+  .jdp__pop {
+    position: absolute;
+    z-index: 40;
+    inset-inline-start: 0;
+    top: calc(100% + 0.35rem);
+    width: min(18.5rem, calc(100vw - 2rem));
+    padding: 0.75rem;
+    border-radius: 0.9rem;
+    background: var(--hr-card);
+    border: 1px solid color-mix(in srgb, var(--hr-border) 55%, transparent);
+    box-shadow: 0 12px 32px -16px rgba(20, 40, 60, 0.35);
+  }
+  .jdp__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.35rem;
+    margin-bottom: 0.55rem;
+  }
+  .jdp__title {
+    margin: 0;
+    font-size: 0.85rem;
+    font-weight: 650;
+  }
+  .jdp__nav {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.85rem;
+    height: 1.85rem;
+    border: 0;
+    border-radius: 0.5rem;
+    background: var(--hr-primary-50);
+    color: var(--hr-primary-700);
+    cursor: pointer;
+  }
+  .jdp__week {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 0.15rem;
+    margin-bottom: 0.25rem;
+    text-align: center;
+    font-size: 0.68rem;
+    color: var(--hr-muted);
+  }
+  .jdp__grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 0.15rem;
+  }
+  .jdp__day {
+    aspect-ratio: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    border-radius: 0.5rem;
+    background: transparent;
+    color: var(--hr-text);
+    font-size: 0.78rem;
+    cursor: pointer;
+  }
+  .jdp__day:not(.is-empty):not(.is-disabled):hover {
+    background: var(--hr-primary-50);
+  }
+  .jdp__day.is-empty {
+    cursor: default;
+    visibility: hidden;
+  }
+  .jdp__day.is-today {
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--hr-primary) 55%, transparent);
+  }
+  .jdp__day.is-selected {
+    background: var(--hr-btn);
+    color: var(--hr-on-btn);
+  }
+  .jdp__day.is-disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+  }
+  .jdp__foot {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-top: 0.55rem;
+    padding-top: 0.45rem;
+    border-top: 1px solid color-mix(in srgb, var(--hr-border) 40%, transparent);
+  }
+
   .help-banner {
     display: flex;
     align-items: flex-start;
@@ -926,54 +1058,86 @@
 
   .data-table-wrap {
     background: var(--hr-card);
-    border: 1px solid color-mix(in srgb, var(--hr-border) 65%, transparent);
-    border-radius: var(--ds-radius-xl);
+    border: 1px solid color-mix(in srgb, var(--hr-border) 40%, transparent);
+    border-radius: 0.85rem;
     overflow: hidden;
-    box-shadow: var(--ds-shadow-xs);
   }
 
   .data-table {
     width: 100%;
-    border-collapse: separate;
+    border-collapse: collapse;
     border-spacing: 0;
-    font-size: 0.875rem;
+    font-size: 0.8125rem;
+    line-height: 1.45;
   }
   .data-table thead th {
     position: sticky;
     top: 0;
     z-index: 1;
-    padding: 0.85rem 1rem;
+    padding: 0.65rem 0.85rem;
     text-align: start;
-    font-size: 0.72rem;
-    font-weight: 600;
-    letter-spacing: 0.02em;
+    font-size: 0.68rem;
+    font-weight: 550;
+    letter-spacing: 0.01em;
     color: var(--hr-muted);
-    background: color-mix(in srgb, var(--hr-primary-50) 55%, var(--hr-card));
-    border-bottom: 1px solid color-mix(in srgb, var(--hr-border) 70%, transparent);
+    background: var(--hr-card);
+    border-bottom: 1px solid color-mix(in srgb, var(--hr-border) 55%, transparent);
+    white-space: nowrap;
+  }
+  .data-table thead th .btn-ghost {
+    color: inherit;
+    font-weight: inherit;
+    font-size: inherit;
+    letter-spacing: inherit;
   }
   html.dark .data-table thead th {
-    background: color-mix(in srgb, var(--hr-card) 88%, #000);
-    color: #d6cfc7;
-  }
-  html.dark .data-table tbody tr:hover {
-    background: color-mix(in srgb, var(--hr-primary-50) 90%, var(--hr-card));
+    background: var(--hr-card);
+    color: color-mix(in srgb, var(--hr-muted) 90%, #fff);
   }
   .data-table tbody td {
-    padding: 0.85rem 1rem;
-    border-bottom: 1px solid color-mix(in srgb, var(--hr-border) 45%, transparent);
+    padding: 0.7rem 0.85rem;
+    border-bottom: 1px solid color-mix(in srgb, var(--hr-border) 28%, transparent);
     vertical-align: middle;
+    color: var(--hr-text);
   }
   .data-table tbody tr {
-    transition: background 0.25s ease, transform 0.25s ease;
+    transition: background 0.15s ease;
   }
   .data-table tbody tr:last-child td {
     border-bottom: none;
   }
   .data-table tbody tr:hover {
-    background: color-mix(in srgb, var(--hr-primary-50) 75%, transparent);
+    background: color-mix(in srgb, var(--hr-primary-50) 45%, transparent);
   }
-  .data-table tbody tr:hover td:first-child {
-    box-shadow: inset 3px 0 0 var(--hr-primary-600);
+  html.dark .data-table tbody tr:hover {
+    background: color-mix(in srgb, var(--hr-primary-50) 35%, transparent);
+  }
+  .data-table tbody td a {
+    color: var(--hr-text);
+    font-weight: 550;
+    text-decoration: none;
+  }
+  .data-table tbody td a:hover {
+    color: var(--hr-link);
+  }
+  .data-table .cell-muted {
+    color: var(--hr-muted);
+    font-size: 0.75rem;
+  }
+  .data-table .cell-mono {
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.01em;
+  }
+  .data-table-wrap__footer {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.65rem 0.85rem;
+    border-top: 1px solid color-mix(in srgb, var(--hr-border) 40%, transparent);
+    font-size: 0.75rem;
+    color: var(--hr-muted);
   }
 
   .search-field {

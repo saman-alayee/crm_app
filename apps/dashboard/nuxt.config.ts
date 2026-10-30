@@ -18,7 +18,7 @@ export default defineNuxtConfig({
       sourcemap: false,
     },
     optimizeDeps: {
-      include: ['vue', 'vue-router', 'pinia'],
+      include: ['vue', 'vue-router', 'pinia', 'socket.io-client'],
     },
   },
   icon: {

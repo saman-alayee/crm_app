@@ -3,6 +3,7 @@ const { api } = useApi();
 const auth = useAuthStore();
 const theme = useTheme();
 const toast = useToast();
+const config = useRuntimeConfig();
 const form = reactive({
   companyName: '',
   timezone: 'Asia/Tehran',
@@ -12,6 +13,8 @@ const form = reactive({
   themeAccent: '#7ebfd6',
   darkModeDefault: false,
 });
+const downloading = ref(false);
+const lastBackupFilename = ref('');
 
 const panelLock = ref<{
   locked: boolean;
@@ -111,7 +114,53 @@ async function unlockPanel() {
   }
 }
 
-onMounted(load);
+async function downloadBackup() {
+  if (!auth.can('backup.export') || downloading.value) return;
+  downloading.value = true;
+  try {
+    const apiBase = resolveApiBase(String(config.public.apiBase || ''));
+    const response = await fetch(`${apiBase}/backup/database`, {
+      headers: { Authorization: `Bearer ${auth.accessToken}` },
+      cache: 'no-store',
+    });
+    if (!response.ok) {
+      let message = 'خطا در تهیه بکاپ';
+      try {
+        const data = await response.json();
+        message = data.message || message;
+      } catch {
+        /* ignore */
+      }
+      throw new Error(message);
+    }
+    const blob = await response.blob();
+    const headerName = response.headers.get('X-Backup-Filename');
+    const filename = headerName || `hr-backup-${Date.now()}.db.gz`;
+    lastBackupFilename.value = filename;
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+    toast.success('بکاپ آماده شد و دانلود آغاز شد');
+  } catch (e: unknown) {
+    toast.error(e instanceof Error ? e.message : 'خطا در بکاپ');
+  } finally {
+    downloading.value = false;
+  }
+}
+
+onMounted(async () => {
+  await load();
+  if (import.meta.client && window.location.hash === '#backup') {
+    requestAnimationFrame(() => {
+      document.getElementById('backup')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }
+});
 useHead({ title: 'تنظیمات' });
 </script>
 
@@ -121,17 +170,17 @@ useHead({ title: 'تنظیمات' });
       class="!mb-4"
       eyebrow="فروشگاه سامی"
       title="تنظیمات"
-      subtitle="نام برند، رنگ پنل، اعلان‌ها و قفل ورود"
+      subtitle="ظاهر، قفل، بکاپ و اتصال تلگرام"
     />
 
     <UiHelpBanner
       storage-key="settings"
       title="راهنمای تنظیمات"
       :steps="[
-        'نام فروشگاه در بالای پنل دیده می‌شود.',
-        'رنگ برند را یک‌بار انتخاب کنید؛ بقیه ظاهر خودکار تنظیم می‌شود.',
-        'قفل پنل یعنی فقط شما وارد شوید — برای مواقع حساس.',
-        'ربات تلگرام را از همین صفحه وصل کنید تا اعلان‌ها روی گوشی بیاید.',
+        'نام فروشگاه و رنگ برند را از همین صفحه تنظیم کنید.',
+        'قفل پنل برای مواقع حساس است.',
+        'بکاپ دیتابیس را قبل از تغییرات مهم دانلود کنید.',
+        'ربات تلگرام را با توکن .env وصل کنید.',
       ]"
     />
 
@@ -269,6 +318,39 @@ useHead({ title: 'تنظیمات' });
           <AppIcon name="lucide:unlock" size="sm" />
           باز کردن قفل
         </button>
+      </div>
+    </UiCard>
+
+    <UiCard v-if="auth.can('backup.export')" id="backup" class="mt-4" padding="lg">
+      <div class="flex flex-wrap items-start justify-between gap-3">
+        <div class="flex items-start gap-3">
+          <div
+            class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
+            style="background: var(--hr-primary-50); color: var(--hr-primary-700)"
+          >
+            <AppIcon name="lucide:database" size="md" />
+          </div>
+          <div>
+            <h2 class="font-semibold">بکاپ دیتابیس</h2>
+            <p class="mt-1 max-w-xl text-sm" style="color: var(--hr-muted)">
+              نسخه فشرده (`.db.gz`) از اطلاعات فعلی. قبل از تغییرات مهم یا هفتگی دانلود کنید.
+            </p>
+          </div>
+        </div>
+      </div>
+      <ul class="mt-3 list-disc space-y-1 pe-5 text-xs" style="color: var(--hr-muted)">
+        <li>دانلود ممکن است چند ثانیه طول بکشد — صفحه را نبندید.</li>
+        <li>فایل را در جای امن نگه دارید و با دیگران به اشتراک نگذارید.</li>
+      </ul>
+      <div class="mt-4 flex flex-wrap items-center gap-3">
+        <button class="btn-primary" type="button" :disabled="downloading" @click="downloadBackup">
+          <AppIcon v-if="downloading" name="lucide:loader-2" size="sm" class="animate-spin" />
+          <AppIcon v-else name="lucide:download" size="sm" />
+          {{ downloading ? 'در حال آماده‌سازی...' : 'دانلود بکاپ' }}
+        </button>
+        <p v-if="lastBackupFilename" class="text-xs" style="color: var(--hr-muted)">
+          آخرین فایل: {{ lastBackupFilename }}
+        </p>
       </div>
     </UiCard>
 

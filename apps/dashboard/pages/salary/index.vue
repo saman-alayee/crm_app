@@ -1,15 +1,18 @@
 <script setup lang="ts">
+import { rules } from '~/composables/useFormValidation';
+
 const { api } = useApi();
 const auth = useAuthStore();
 const toast = useToast();
 const { formatNumber } = useFormat();
+const { errors, clearField, validate } = useFormValidation();
 
 const loading = ref(true);
 const items = ref<any[]>([]);
 const showForm = ref(false);
 const rejectId = ref<string | null>(null);
 const rejectReason = ref('');
-const form = reactive({ type: 'ADVANCE' as 'SALARY' | 'ADVANCE', amount: 0, description: '' });
+const form = reactive({ type: 'ADVANCE' as 'SALARY' | 'ADVANCE', amount: '' as number | '', description: '' });
 
 async function load() {
   loading.value = true;
@@ -24,13 +27,26 @@ async function load() {
 }
 
 async function create() {
+  if (
+    !validate(
+      { ...form, amount: form.amount },
+      {
+        amount: [rules.required('مبلغ را وارد کنید'), rules.positiveNumber()],
+      },
+    )
+  ) {
+    toast.error('لطفاً خطاهای فرم را برطرف کنید');
+    return;
+  }
   try {
     await api('/salary-requests', {
       method: 'POST',
-      body: { type: form.type, amount: Number(form.amount), description: form.description },
+      body: { type: form.type, amount: Number(form.amount), description: form.description.trim() },
     });
     toast.success('ثبت شد');
     showForm.value = false;
+    form.amount = '';
+    form.description = '';
     await load();
   } catch (e: any) {
     toast.error(e?.data?.message || 'خطا');
@@ -49,6 +65,10 @@ async function approve(id: string) {
 
 async function reject() {
   if (!rejectId.value) return;
+  if (!validate({ rejectReason: rejectReason.value }, { rejectReason: [rules.required('دلیل رد را بنویسید')] })) {
+    toast.error('دلیل رد الزامی است');
+    return;
+  }
   try {
     await api(`/salary-requests/${rejectId.value}/reject`, {
       method: 'POST',
@@ -56,6 +76,7 @@ async function reject() {
     });
     toast.success('رد شد');
     rejectId.value = null;
+    rejectReason.value = '';
     await load();
   } catch (e: any) {
     toast.error(e?.data?.message || 'خطا');
@@ -103,12 +124,21 @@ useHead({ title: 'حقوق و مساعده' });
         </div>
         <div>
           <label class="field-label">مبلغ (ریال)</label>
-          <input v-model.number="form.amount" type="number" class="input-field" placeholder="مثلاً 5000000" />
+          <input
+            v-model="form.amount"
+            type="number"
+            min="1"
+            class="input-field"
+            :class="{ 'input-invalid': errors.amount }"
+            placeholder="مثلاً 5000000"
+            @input="clearField('amount')"
+          />
+          <UiFieldError :message="errors.amount" />
           <UiFieldHint text="فقط عدد وارد کنید؛ بدون ویرگول یا تومان." />
         </div>
         <div>
           <label class="field-label">توضیح</label>
-          <input v-model="form.description" class="input-field" placeholder="اختیاری" />
+          <input v-model="form.description" class="input-field" placeholder="اختیاری" maxlength="300" />
         </div>
       </div>
       <button class="btn-primary mt-4" type="button" @click="create">ثبت درخواست</button>
@@ -116,7 +146,14 @@ useHead({ title: 'حقوق و مساعده' });
 
     <div v-if="rejectId" class="card mb-4 p-4">
       <label class="field-label">دلیل رد</label>
-      <input v-model="rejectReason" class="input-field" placeholder="برای کارمند توضیح بنویسید" />
+      <input
+        v-model="rejectReason"
+        class="input-field"
+        :class="{ 'input-invalid': errors.rejectReason }"
+        placeholder="برای کارمند توضیح بنویسید"
+        @input="clearField('rejectReason')"
+      />
+      <UiFieldError :message="errors.rejectReason" />
       <div class="mt-3 flex gap-2">
         <button class="btn-primary" type="button" @click="reject">ثبت رد</button>
         <button class="btn-secondary" type="button" @click="rejectId = null">انصراف</button>

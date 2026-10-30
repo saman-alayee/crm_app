@@ -1,8 +1,11 @@
 <script setup lang="ts">
+import { rules } from '~/composables/useFormValidation';
+
 const { api } = useApi();
 const auth = useAuthStore();
 const toast = useToast();
 const { formatNumber } = useFormat();
+const { errors, clearField, validate } = useFormValidation();
 
 const loading = ref(true);
 const items = ref<any[]>([]);
@@ -107,8 +110,32 @@ function toggleSort(field: string) {
 }
 
 async function createEmployee() {
+  if (
+    !validate(
+      { ...form },
+      {
+        firstName: [rules.required('نام الزامی است'), rules.minLength(2)],
+        lastName: [rules.required('نام خانوادگی الزامی است'), rules.minLength(2)],
+        username: [rules.required('نام کاربری الزامی است'), rules.username()],
+        password: [rules.required('رمز عبور الزامی است'), rules.password()],
+        phone: [rules.phone()],
+      },
+    )
+  ) {
+    toast.error('لطفاً خطاهای فرم را برطرف کنید');
+    return;
+  }
   try {
-    await api('/employees', { method: 'POST', body: { ...form } });
+    await api('/employees', {
+      method: 'POST',
+      body: {
+        ...form,
+        firstName: form.firstName.trim(),
+        lastName: form.lastName.trim(),
+        username: form.username.trim(),
+        phone: form.phone.trim() || undefined,
+      },
+    });
     toast.success('کارمند ایجاد شد');
     showForm.value = false;
     Object.assign(form, {
@@ -291,25 +318,63 @@ useHead({ title: 'کارکنان' });
       <div class="grid gap-3 md:grid-cols-2">
         <div>
           <label class="field-label">نام</label>
-          <input v-model="form.firstName" class="input-field" placeholder="مثال: سارا" />
+          <input
+            v-model="form.firstName"
+            class="input-field"
+            :class="{ 'input-invalid': errors.firstName }"
+            placeholder="مثال: سارا"
+            @input="clearField('firstName')"
+          />
+          <UiFieldError :message="errors.firstName" />
         </div>
         <div>
           <label class="field-label">نام خانوادگی</label>
-          <input v-model="form.lastName" class="input-field" placeholder="مثال: محمدی" />
+          <input
+            v-model="form.lastName"
+            class="input-field"
+            :class="{ 'input-invalid': errors.lastName }"
+            placeholder="مثال: محمدی"
+            @input="clearField('lastName')"
+          />
+          <UiFieldError :message="errors.lastName" />
         </div>
         <div>
           <label class="field-label">نام کاربری</label>
-          <input v-model="form.username" class="input-field" placeholder="برای ورود به پنل" dir="ltr" />
+          <input
+            v-model="form.username"
+            class="input-field"
+            :class="{ 'input-invalid': errors.username }"
+            placeholder="برای ورود به پنل"
+            dir="ltr"
+            @input="clearField('username')"
+          />
+          <UiFieldError :message="errors.username" />
           <UiFieldHint text="ترجیحاً انگلیسی و بدون فاصله — مثلاً sara.m" />
         </div>
         <div>
           <label class="field-label">رمز عبور</label>
-          <input v-model="form.password" type="password" class="input-field" placeholder="حداقل ۶ کاراکتر" />
+          <input
+            v-model="form.password"
+            type="password"
+            class="input-field"
+            :class="{ 'input-invalid': errors.password }"
+            placeholder="حداقل ۶ کاراکتر"
+            @input="clearField('password')"
+          />
+          <UiFieldError :message="errors.password" />
           <UiFieldHint text="این رمز را به کارمند بدهید تا بتواند وارد شود." />
         </div>
         <div>
           <label class="field-label">موبایل</label>
-          <input v-model="form.phone" class="input-field" placeholder="09xxxxxxxxx" dir="ltr" />
+          <input
+            v-model="form.phone"
+            class="input-field"
+            :class="{ 'input-invalid': errors.phone }"
+            placeholder="09xxxxxxxxx"
+            dir="ltr"
+            @input="clearField('phone')"
+          />
+          <UiFieldError :message="errors.phone" />
         </div>
         <div>
           <label class="field-label">کد پرسنلی</label>
@@ -376,14 +441,14 @@ useHead({ title: 'کارکنان' });
           <tbody>
             <tr v-for="row in items" :key="row.id">
               <td>
-                <NuxtLink :to="`/employees/${row.id}`" class="hover-underline font-medium text-primary-700">
+                <NuxtLink :to="`/employees/${row.id}`">
                   {{ row.firstName }} {{ row.lastName }}
                 </NuxtLink>
-                <p v-if="row.employeeCode" class="mt-0.5 text-[11px]" style="color: var(--hr-muted)">
+                <p v-if="row.employeeCode" class="cell-muted mt-0.5">
                   {{ row.employeeCode }}
                 </p>
               </td>
-              <td dir="ltr" class="text-xs">{{ row.user?.username }}</td>
+              <td dir="ltr" class="cell-muted cell-mono">{{ row.user?.username }}</td>
               <td>{{ row.department || '—' }}</td>
               <td>{{ row.jobTitle || '—' }}</td>
               <td>
@@ -425,8 +490,8 @@ useHead({ title: 'کارکنان' });
           </tbody>
         </table>
       </div>
-      <div class="flex flex-wrap items-center justify-between gap-3 border-t px-4 py-3" style="border-color: var(--hr-border)">
-        <p class="text-xs" style="color: var(--hr-muted)">{{ formatNumber(pagination?.total || 0) }} نفر</p>
+      <div class="data-table-wrap__footer">
+        <p>{{ formatNumber(pagination?.total || 0) }} نفر</p>
         <AppPagination :pagination="pagination" compact @update:page="load" />
       </div>
     </div>

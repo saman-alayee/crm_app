@@ -47,8 +47,37 @@ async function hireAnniversariesThisMonth(limit = 8) {
 
 dashboardRouter.get(
   '/summary',
-  asyncHandler(async (_req, res) => {
+  asyncHandler(async (req, res) => {
     const now = new Date();
+    const perms = req.user!.permissions;
+    const userId = req.user!.id;
+    const canSeeEmployees = perms.includes('employees.view');
+    const canSeeDepartments = perms.includes('departments.view');
+    const canApproveLeave = perms.includes('leave.approve') || perms.includes('leave.reject');
+    const canApproveSalary = perms.includes('salary.approve') || perms.includes('salary.reject');
+    const canManageTasks = perms.includes('tasks.create') || perms.includes('tasks.edit');
+
+    const employee = await prisma.employee.findUnique({
+      where: { userId },
+      select: { id: true },
+    });
+
+    const leaveWhere = canApproveLeave
+      ? { status: 'PENDING' as const }
+      : employee
+        ? { status: 'PENDING' as const, employeeId: employee.id }
+        : { status: 'PENDING' as const, employeeId: '__none__' };
+
+    const salaryWhere = canApproveSalary
+      ? { status: 'PENDING' as const }
+      : employee
+        ? { status: 'PENDING' as const, employeeId: employee.id }
+        : { status: 'PENDING' as const, employeeId: '__none__' };
+
+    const taskBase = {
+      status: { in: ['PENDING' as const, 'IN_PROGRESS' as const] },
+      ...(!canManageTasks && employee ? { assigneeId: employee.id } : {}),
+    };
 
     const [
       employeesTotal,
@@ -62,18 +91,21 @@ dashboardRouter.get(
       departmentsTotal,
       hireAnniversaries,
     ] = await Promise.all([
-      prisma.employee.count(),
-      prisma.user.count({ where: { isActive: true, employee: { isNot: null } } }),
-      prisma.leaveRequest.count({ where: { status: 'PENDING' } }),
-      prisma.salaryRequest.count({ where: { status: 'PENDING' } }),
-      prisma.task.count({ where: { status: { in: ['PENDING', 'IN_PROGRESS'] } } }),
+      canSeeEmployees ? prisma.employee.count() : Promise.resolve(0),
+      canSeeEmployees
+        ? prisma.user.count({ where: { isActive: true, employee: { isNot: null } } })
+        : Promise.resolve(0),
+      prisma.leaveRequest.count({ where: leaveWhere }),
+      prisma.salaryRequest.count({ where: salaryWhere }),
+      prisma.task.count({ where: taskBase }),
       prisma.task.count({
         where: {
-          status: { in: ['PENDING', 'IN_PROGRESS'] },
+          ...taskBase,
           dueAt: { lt: now },
         },
       }),
       prisma.notification.findMany({
+        where: { userId },
         orderBy: { createdAt: 'desc' },
         take: 5,
         select: { id: true, title: true, body: true, isRead: true, createdAt: true },
@@ -93,8 +125,8 @@ dashboardRouter.get(
           publishAt: true,
         },
       }),
-      prisma.department.count(),
-      hireAnniversariesThisMonth(8),
+      canSeeDepartments ? prisma.department.count() : Promise.resolve(0),
+      canSeeEmployees ? hireAnniversariesThisMonth(8) : Promise.resolve([]),
     ]);
 
     successResponse(res, {
@@ -109,6 +141,13 @@ dashboardRouter.get(
       recentNotifications,
       announcements,
       hireAnniversaries,
+      scope: {
+        employees: canSeeEmployees,
+        departments: canSeeDepartments,
+        leaveQueue: canApproveLeave,
+        salaryQueue: canApproveSalary,
+        tasksManage: canManageTasks,
+      },
     });
   })
 );

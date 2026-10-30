@@ -47,6 +47,12 @@ export const config = {
     ownerPassword: process.env.SEED_OWNER_PASSWORD || 'ChangeMeOwner123!',
     ownerEmail: process.env.SEED_OWNER_EMAIL || 'owner@example.com',
   },
+  /** Keep audit logs for N days (default 90). Set 0 to disable age-based purge. */
+  auditRetentionDays: Math.max(0, Number(process.env.AUDIT_RETENTION_DAYS || 90)),
+  /** Hard cap on audit_logs rows (default 100000). Set 0 to disable. */
+  auditMaxRows: Math.max(0, Number(process.env.AUDIT_MAX_ROWS || 100_000)),
+  /** How often the purge job runs (hours). Default 24. */
+  auditPurgeIntervalHours: Math.max(1, Number(process.env.AUDIT_PURGE_INTERVAL_HOURS || 24)),
 };
 
 export function assertProductionSecurity() {

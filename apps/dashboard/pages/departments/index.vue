@@ -1,8 +1,11 @@
 <script setup lang="ts">
+import { rules } from '~/composables/useFormValidation';
+
 const { api } = useApi();
 const auth = useAuthStore();
 const toast = useToast();
 const { formatNumber } = useFormat();
+const { errors, clearField, validate } = useFormValidation();
 const items = ref<any[]>([]);
 const name = ref('');
 const description = ref('');
@@ -13,8 +16,15 @@ async function load() {
 }
 
 async function create() {
+  if (!validate({ name: name.value }, { name: [rules.required('نام دپارتمان الزامی است'), rules.minLength(2)] })) {
+    toast.error('نام دپارتمان را وارد کنید');
+    return;
+  }
   try {
-    await api('/departments', { method: 'POST', body: { name: name.value, description: description.value } });
+    await api('/departments', {
+      method: 'POST',
+      body: { name: name.value.trim(), description: description.value.trim() },
+    });
     toast.success('دپارتمان ایجاد شد');
     name.value = '';
     description.value = '';
@@ -61,7 +71,14 @@ useHead({ title: 'دپارتمان‌ها' });
       <p class="mb-3 text-xs" style="color: var(--hr-muted)">نام کوتاه و واضح بهتر است.</p>
       <div class="grid gap-3 md:grid-cols-3">
         <div>
-          <input v-model="name" class="input-field" placeholder="نام دپارتمان" />
+          <input
+            v-model="name"
+            class="input-field"
+            :class="{ 'input-invalid': errors.name }"
+            placeholder="نام دپارتمان"
+            @input="clearField('name')"
+          />
+          <UiFieldError :message="errors.name" />
         </div>
         <div>
           <input v-model="description" class="input-field" placeholder="توضیح کوتاه (اختیاری)" />

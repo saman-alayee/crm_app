@@ -1,8 +1,12 @@
 <script setup lang="ts">
+import { getTodayGregorianIso } from '~/utils/jalali';
+import { rules } from '~/composables/useFormValidation';
+
 const { api } = useApi();
 const auth = useAuthStore();
 const toast = useToast();
 const { formatShortDate } = useFormat();
+const { errors, clearField, validate } = useFormValidation();
 
 const loading = ref(true);
 const items = ref<any[]>([]);
@@ -12,7 +16,7 @@ const rejectId = ref<string | null>(null);
 const rejectReason = ref('');
 const form = reactive({
   type: 'DAILY' as 'DAILY' | 'HOURLY',
-  leaveDate: new Date().toISOString().slice(0, 10),
+  leaveDate: getTodayGregorianIso(),
   startTime: '',
   endTime: '',
   reason: '',
@@ -35,8 +39,30 @@ async function load() {
 }
 
 async function create() {
+  const schema: Record<string, ReturnType<typeof rules.required>[]> = {
+    leaveDate: [rules.required('تاریخ مرخصی را انتخاب کنید'), rules.dateIso()],
+  };
+  if (form.type === 'HOURLY') {
+    schema.startTime = [rules.required('ساعت شروع الزامی است'), rules.time()];
+    schema.endTime = [
+      rules.required('ساعت پایان الزامی است'),
+      rules.time(),
+      rules.endAfterStart('startTime'),
+    ];
+  }
+  if (!validate({ ...form }, schema)) {
+    toast.error('لطفاً خطاهای فرم را برطرف کنید');
+    return;
+  }
   try {
-    await api('/leave-requests', { method: 'POST', body: { ...form } });
+    await api('/leave-requests', {
+      method: 'POST',
+      body: {
+        ...form,
+        startTime: form.type === 'HOURLY' ? form.startTime : undefined,
+        endTime: form.type === 'HOURLY' ? form.endTime : undefined,
+      },
+    });
     toast.success('درخواست ثبت شد');
     showForm.value = false;
     await load();
@@ -57,6 +83,10 @@ async function approve(id: string) {
 
 async function reject() {
   if (!rejectId.value) return;
+  if (!validate({ rejectReason: rejectReason.value }, { rejectReason: [rules.required('دلیل رد را بنویسید')] })) {
+    toast.error('دلیل رد الزامی است');
+    return;
+  }
   try {
     await api(`/leave-requests/${rejectId.value}/reject`, {
       method: 'POST',
@@ -93,7 +123,7 @@ useHead({ title: 'مرخصی' });
       storage-key="leave"
       title="راهنمای مرخصی"
       :steps="[
-        'با «درخواست جدید» نوع روزانه یا ساعتی را انتخاب و تاریخ را بزنید.',
+        'با «درخواست جدید» نوع روزانه یا ساعتی را انتخاب و تاریخ شمسی را بزنید.',
         'وضعیت «در انتظار» یعنی هنوز مدیر بررسی نکرده است.',
         'مدیران با دکمه‌های تأیید / رد روی هر کارت تصمیم می‌گیرند.',
       ]"
@@ -112,7 +142,7 @@ useHead({ title: 'مرخصی' });
 
     <div v-if="showForm" class="card mb-4 p-4">
       <h2 class="mb-1 font-semibold">ثبت درخواست مرخصی</h2>
-      <p class="mb-3 text-xs" style="color: var(--hr-muted)">بعد از ثبت، درخواست برای مدیر ارسال می‌شود.</p>
+      <p class="mb-3 text-xs" style="color: var(--hr-muted)">تاریخ‌ها به‌صورت شمسی نمایش داده می‌شوند.</p>
       <div class="grid gap-3 md:grid-cols-2">
         <div>
           <label class="field-label">نوع</label>
@@ -120,23 +150,41 @@ useHead({ title: 'مرخصی' });
             <option value="DAILY">روزانه (کل روز)</option>
             <option value="HOURLY">ساعتی (بازه زمانی)</option>
           </select>
-          <UiFieldHint text="اگر فقط چند ساعت لازم دارید، «ساعتی» را انتخاب کنید." />
         </div>
         <div>
-          <label class="field-label">تاریخ</label>
-          <input v-model="form.leaveDate" type="date" class="input-field" />
+          <label class="field-label">تاریخ (شمسی)</label>
+          <JalaliDatePicker
+            v-model="form.leaveDate"
+            :invalid="!!errors.leaveDate"
+            @update:model-value="clearField('leaveDate')"
+          />
+          <UiFieldError :message="errors.leaveDate" />
         </div>
         <div v-if="form.type === 'HOURLY'">
           <label class="field-label">از ساعت</label>
-          <input v-model="form.startTime" type="time" class="input-field" />
+          <input
+            v-model="form.startTime"
+            type="time"
+            class="input-field"
+            :class="{ 'input-invalid': errors.startTime }"
+            @input="clearField('startTime')"
+          />
+          <UiFieldError :message="errors.startTime" />
         </div>
         <div v-if="form.type === 'HOURLY'">
           <label class="field-label">تا ساعت</label>
-          <input v-model="form.endTime" type="time" class="input-field" />
+          <input
+            v-model="form.endTime"
+            type="time"
+            class="input-field"
+            :class="{ 'input-invalid': errors.endTime }"
+            @input="clearField('endTime')"
+          />
+          <UiFieldError :message="errors.endTime" />
         </div>
         <div class="md:col-span-2">
           <label class="field-label">توضیح (اختیاری)</label>
-          <input v-model="form.reason" class="input-field" placeholder="مثال: مراجعه پزشکی" />
+          <input v-model="form.reason" class="input-field" placeholder="مثال: مراجعه پزشکی" maxlength="300" />
         </div>
       </div>
       <button class="btn-primary mt-4" type="button" @click="create">ثبت درخواست</button>
@@ -144,8 +192,14 @@ useHead({ title: 'مرخصی' });
 
     <div v-if="rejectId" class="card mb-4 border border-red-100 p-4">
       <label class="field-label">دلیل رد</label>
-      <input v-model="rejectReason" class="input-field" placeholder="برای کارمند توضیح بنویسید" />
-      <UiFieldHint text="دلیل رد برای کارمند قابل مشاهده است." />
+      <input
+        v-model="rejectReason"
+        class="input-field"
+        :class="{ 'input-invalid': errors.rejectReason }"
+        placeholder="برای کارمند توضیح بنویسید"
+        @input="clearField('rejectReason')"
+      />
+      <UiFieldError :message="errors.rejectReason" />
       <div class="mt-3 flex gap-2">
         <button class="btn-primary" type="button" @click="reject">ثبت رد</button>
         <button class="btn-secondary" type="button" @click="rejectId = null">انصراف</button>
@@ -169,11 +223,11 @@ useHead({ title: 'مرخصی' });
               <StatusBadge :status="row.type" class="ms-2" />
               <StatusBadge :status="row.status" class="ms-1" />
             </p>
-            <p class="mt-1 text-sm text-gray-500">
+            <p class="mt-1 text-sm" style="color: var(--hr-muted)">
               تاریخ: {{ formatShortDate(row.leaveDate) }}
               <span v-if="row.startTime"> · {{ row.startTime }} تا {{ row.endTime }}</span>
             </p>
-            <p v-if="row.reason" class="mt-1 text-sm text-gray-600">{{ row.reason }}</p>
+            <p v-if="row.reason" class="mt-1 text-sm">{{ row.reason }}</p>
             <p v-if="row.rejectionReason" class="mt-1 text-sm text-red-600">دلیل رد: {{ row.rejectionReason }}</p>
           </div>
           <div v-if="row.status === 'PENDING'" class="flex gap-2">

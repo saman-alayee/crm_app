@@ -25,6 +25,8 @@ import { backupRouter } from './modules/backup/backup.routes.js';
 import { announcementsRouter } from './modules/announcements/announcements.routes.js';
 import { departmentsRouter } from './modules/departments/departments.routes.js';
 import { botRouter } from './modules/bot/bot.routes.js';
+import { startAuditRetentionJob } from './services/audit-retention.service.js';
+import { attachRealtimeAuth, setRealtimeServer } from './services/realtime.service.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -33,12 +35,27 @@ assertProductionSecurity();
 const app = express();
 const httpServer = createServer(app);
 
+function isAllowedOrigin(origin?: string) {
+  if (!origin) return true;
+  if (config.corsOrigins.includes(origin)) return true;
+  if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) return true;
+  return /^https?:\/\/(192\.168\.\d{1,3}\.\d{1,3}|10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2\d|3[0-1])\.\d{1,3}\.\d{1,3})(:\d+)?$/.test(
+    origin
+  );
+}
+
 export const io = new SocketServer(httpServer, {
+  path: '/socket.io',
   cors: {
-    origin: config.corsOrigins,
+    origin(origin, cb) {
+      if (isAllowedOrigin(origin)) return cb(null, true);
+      return cb(new Error('Not allowed by CORS'));
+    },
     credentials: true,
   },
 });
+setRealtimeServer(io);
+attachRealtimeAuth(io);
 
 if (config.isProd) {
   app.set('trust proxy', 1);
@@ -48,15 +65,7 @@ app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 app.use(
   cors({
     origin(origin, cb) {
-      const allowed =
-        !origin ||
-        config.corsOrigins.includes(origin) ||
-        /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin) ||
-        // LAN / phone testing for PWA (private IPv4)
-        /^https?:\/\/(192\.168\.\d{1,3}\.\d{1,3}|10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2\d|3[0-1])\.\d{1,3}\.\d{1,3})(:\d+)?$/.test(
-          origin
-        );
-      if (allowed) return cb(null, true);
+      if (isAllowedOrigin(origin)) return cb(null, true);
       return cb(new Error('Not allowed by CORS'));
     },
     credentials: true,
@@ -92,14 +101,7 @@ app.use('/api/v1/bot', botRouter);
 app.use(notFound);
 app.use(errorHandler);
 
-io.on('connection', (socket) => {
-  socket.on('subscribe', (userId: string) => {
-    if (typeof userId === 'string' && userId) {
-      socket.join(`user:${userId}`);
-    }
-  });
-});
-
 httpServer.listen(config.port, config.host, () => {
   console.log(`HR API listening on http://${config.host}:${config.port}`);
+  startAuditRetentionJob();
 });

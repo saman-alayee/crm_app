@@ -121,6 +121,9 @@ TELEGRAM_WEBHOOK_SECRET=
 SEED_OWNER_USERNAME=owner
 SEED_OWNER_PASSWORD=${OWNER_PASS}
 SEED_OWNER_EMAIL=owner@${PUBLIC_HOST}
+AUDIT_RETENTION_DAYS=90
+AUDIT_MAX_ROWS=100000
+AUDIT_PURGE_INTERVAL_HOURS=24
 NUXT_PUBLIC_API_BASE=http://${PUBLIC_HOST}/api/v1
 EOF
   chown "$APP_USER:$APP_USER" "$ENV_FILE"
@@ -284,12 +287,35 @@ rm -f /etc/nginx/sites-enabled/default
 nginx -t
 systemctl reload nginx
 
+echo "==> Ensuring admin user 'saman'"
+SAMAN_PASS_FILE="$APP_ROOT/ADMIN_SAMAN.txt"
+# Prefer explicit env, then existing file, then stable default for first bootstrap
+if [ -n "${ADMIN_SAMAN_PASSWORD:-}" ]; then
+  SAMAN_PASS="$ADMIN_SAMAN_PASSWORD"
+elif [ -f "$SAMAN_PASS_FILE" ]; then
+  SAMAN_PASS="$(tr -d '\r\n' < "$SAMAN_PASS_FILE")"
+else
+  SAMAN_PASS="Saman@Crm2026!"
+fi
+printf '%s\n' "$SAMAN_PASS" > "$SAMAN_PASS_FILE"
+chmod 600 "$SAMAN_PASS_FILE"
+chown root:root "$SAMAN_PASS_FILE"
+sudo -u "$APP_USER" bash -lc "cd '$APP_DIR/apps/api' && DATABASE_URL=\"file:${DATA_DIR}/prod.db\" node scripts/create-admin-user.mjs saman '$SAMAN_PASS' سامان ادمین" \
+  || sudo -u "$APP_USER" bash -lc "cd '$APP_DIR' && DATABASE_URL=\"file:${DATA_DIR}/prod.db\" node apps/api/scripts/create-admin-user.mjs saman '$SAMAN_PASS' سامان ادمین" \
+  || echo "WARN: could not create saman admin (seed/scripts missing?)"
+
 echo "==> Done"
 echo "URL: http://${PUBLIC_HOST}/"
 if [ -f "$APP_ROOT/CREDENTIALS.txt" ]; then
   echo "Owner password file: $APP_ROOT/CREDENTIALS.txt"
   echo -n "owner / "
   cat "$APP_ROOT/CREDENTIALS.txt"
+  echo
+fi
+if [ -f "$SAMAN_PASS_FILE" ]; then
+  echo "Admin saman password file: $SAMAN_PASS_FILE"
+  echo -n "saman / "
+  cat "$SAMAN_PASS_FILE"
   echo
 fi
 pm2 status || sudo -u "$APP_USER" pm2 status

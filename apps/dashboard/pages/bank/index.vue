@@ -1,7 +1,10 @@
 <script setup lang="ts">
+import { rules } from '~/composables/useFormValidation';
+
 const { api } = useApi();
 const auth = useAuthStore();
 const toast = useToast();
+const { errors, clearField, validate } = useFormValidation();
 const mine = ref<any>(null);
 const all = ref<any[]>([]);
 const form = reactive({ accountHolder: '', accountNumber: '', iban: '', bankName: '' });
@@ -28,8 +31,25 @@ async function load() {
 }
 
 async function save() {
+  const iban = form.iban.trim().replace(/\s/g, '').toUpperCase();
+  if (
+    !validate(
+      { ...form, iban },
+      {
+        accountHolder: [rules.required('نام صاحب حساب الزامی است'), rules.minLength(3)],
+        bankName: [rules.required('نام بانک الزامی است')],
+        iban: [rules.required('شبا الزامی است'), rules.iban()],
+      },
+    )
+  ) {
+    toast.error('لطفاً خطاهای فرم را برطرف کنید');
+    return;
+  }
   try {
-    await api('/bank-accounts/me', { method: 'PUT', body: { ...form } });
+    await api('/bank-accounts/me', {
+      method: 'PUT',
+      body: { ...form, iban, accountHolder: form.accountHolder.trim(), bankName: form.bankName.trim() },
+    });
     toast.success('ذخیره شد');
     await load();
   } catch (e: any) {
@@ -65,15 +85,37 @@ useHead({ title: 'حساب بانکی' });
       <div class="grid gap-3 md:grid-cols-2">
         <div>
           <label class="field-label">صاحب حساب</label>
-          <input v-model="form.accountHolder" class="input-field" placeholder="نام روی کارت" />
+          <input
+            v-model="form.accountHolder"
+            class="input-field"
+            :class="{ 'input-invalid': errors.accountHolder }"
+            placeholder="نام روی کارت"
+            @input="clearField('accountHolder')"
+          />
+          <UiFieldError :message="errors.accountHolder" />
         </div>
         <div>
           <label class="field-label">بانک</label>
-          <input v-model="form.bankName" class="input-field" placeholder="مثال: ملت" />
+          <input
+            v-model="form.bankName"
+            class="input-field"
+            :class="{ 'input-invalid': errors.bankName }"
+            placeholder="مثال: ملت"
+            @input="clearField('bankName')"
+          />
+          <UiFieldError :message="errors.bankName" />
         </div>
         <div>
           <label class="field-label">شبا</label>
-          <input v-model="form.iban" class="input-field" dir="ltr" placeholder="IRxxxxxxxxxxxxxxxxxxxxxx" />
+          <input
+            v-model="form.iban"
+            class="input-field"
+            :class="{ 'input-invalid': errors.iban }"
+            dir="ltr"
+            placeholder="IRxxxxxxxxxxxxxxxxxxxxxx"
+            @input="clearField('iban')"
+          />
+          <UiFieldError :message="errors.iban" />
           <UiFieldHint text="۲۴ رقم بعد از IR — بدون فاصله و خط تیره." />
         </div>
         <div>
@@ -84,25 +126,27 @@ useHead({ title: 'حساب بانکی' });
       <button class="btn-primary mt-4" type="button" @click="save">ذخیره حساب</button>
     </div>
 
-    <div v-if="all.length" class="card overflow-x-auto">
-      <table class="min-w-full text-sm">
-        <thead class="bg-gray-50 text-gray-500">
-          <tr>
-            <th class="px-4 py-3 text-start">کارمند</th>
-            <th class="px-4 py-3 text-start">بانک</th>
-            <th class="px-4 py-3 text-start">شبا</th>
-            <th class="px-4 py-3 text-start">صاحب حساب</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="row in all" :key="row.id" class="border-t">
-            <td class="px-4 py-3">{{ row.employee?.firstName }} {{ row.employee?.lastName }}</td>
-            <td class="px-4 py-3">{{ row.bankName }}</td>
-            <td class="px-4 py-3" dir="ltr">{{ row.iban }}</td>
-            <td class="px-4 py-3">{{ row.accountHolder }}</td>
-          </tr>
-        </tbody>
-      </table>
+    <div v-if="all.length" class="data-table-wrap">
+      <div class="overflow-x-auto">
+        <table class="data-table min-w-[560px]">
+          <thead>
+            <tr>
+              <th>کارمند</th>
+              <th>بانک</th>
+              <th>شبا</th>
+              <th>صاحب حساب</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="row in all" :key="row.id">
+              <td>{{ row.employee?.firstName }} {{ row.employee?.lastName }}</td>
+              <td>{{ row.bankName }}</td>
+              <td class="cell-mono cell-muted" dir="ltr">{{ row.iban }}</td>
+              <td>{{ row.accountHolder }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   </div>
 </template>

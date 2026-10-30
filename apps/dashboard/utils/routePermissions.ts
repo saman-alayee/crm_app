@@ -12,7 +12,7 @@ export const ROUTE_PERMISSIONS: { match: RegExp | string; permission: string }[]
   { match: /^\/notifications(\/|$)/, permission: 'notifications.view' },
   { match: /^\/reports(\/|$)/, permission: 'reports.view' },
   { match: /^\/audit(\/|$)/, permission: 'audit.view' },
-  { match: /^\/backup(\/|$)/, permission: 'backup.export' },
+  { match: /^\/backup(\/|$)/, permission: 'settings.view' },
   { match: /^\/settings(\/|$)/, permission: 'settings.view' },
 ];
 

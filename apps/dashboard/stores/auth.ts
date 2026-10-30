@@ -211,6 +211,11 @@ export const useAuthStore = defineStore('auth', () => {
     clearApiGetCache();
     hydrated = false;
     sessionEpoch.value += 1;
+    try {
+      useNotificationsStore().reset();
+    } catch {
+      /* store may not be ready during early boot */
+    }
   }
 
   async function logout() {

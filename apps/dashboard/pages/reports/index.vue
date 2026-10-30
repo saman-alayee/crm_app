@@ -70,32 +70,34 @@ useHead({ title: 'گزارش‌ها' });
       tip="بعد از ثبت کارکنان و فعالیت‌ها، آمار اینجا می‌آید."
       icon="lucide:bar-chart-3"
     />
-    <div v-else class="card overflow-x-auto">
-      <table class="min-w-full text-sm">
-        <thead class="bg-gray-50 text-gray-500">
-          <tr>
-            <th class="px-3 py-3 text-start">کارمند</th>
-            <th class="px-3 py-3 text-start">مرخصی</th>
-            <th class="px-3 py-3 text-start">تأیید/رد</th>
-            <th class="px-3 py-3 text-start">مالی</th>
-            <th class="px-3 py-3 text-start">وظایف</th>
-            <th class="px-3 py-3 text-start">عقب‌افتاده</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="row in items" :key="row.id" class="border-t">
-            <td class="px-3 py-3">
-              {{ row.name }}
-              <span class="text-xs text-gray-400">(@{{ row.username }})</span>
-            </td>
-            <td class="px-3 py-3">{{ formatNumber(row.leaveTotal) }}</td>
-            <td class="px-3 py-3">{{ formatNumber(row.leaveApproved) }} / {{ formatNumber(row.leaveRejected) }}</td>
-            <td class="px-3 py-3">{{ formatNumber(row.salaryTotal) }}</td>
-            <td class="px-3 py-3">{{ formatNumber(row.tasksCompleted) }}/{{ formatNumber(row.tasksAssigned) }}</td>
-            <td class="px-3 py-3">{{ formatNumber(row.tasksOverdue) }}</td>
-          </tr>
-        </tbody>
-      </table>
+    <div v-else class="data-table-wrap">
+      <div class="overflow-x-auto">
+        <table class="data-table min-w-[640px]">
+          <thead>
+            <tr>
+              <th>کارمند</th>
+              <th>مرخصی</th>
+              <th>تأیید/رد</th>
+              <th>مالی</th>
+              <th>وظایف</th>
+              <th>عقب‌افتاده</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="row in items" :key="row.id">
+              <td>
+                {{ row.name }}
+                <span class="cell-muted"> (@{{ row.username }})</span>
+              </td>
+              <td class="cell-mono">{{ formatNumber(row.leaveTotal) }}</td>
+              <td class="cell-mono">{{ formatNumber(row.leaveApproved) }} / {{ formatNumber(row.leaveRejected) }}</td>
+              <td class="cell-mono">{{ formatNumber(row.salaryTotal) }}</td>
+              <td class="cell-mono">{{ formatNumber(row.tasksCompleted) }}/{{ formatNumber(row.tasksAssigned) }}</td>
+              <td class="cell-mono">{{ formatNumber(row.tasksOverdue) }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   </div>
 </template>
