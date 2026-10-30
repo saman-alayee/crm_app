@@ -8,6 +8,12 @@ export const ROUTE_PERMISSIONS: { match: RegExp | string; permission: string }[]
   { match: /^\/bank(\/|$)/, permission: 'bank.view' },
   { match: /^\/tasks(\/|$)/, permission: 'tasks.view' },
   { match: /^\/announcements(\/|$)/, permission: 'announcements.view' },
+  { match: /^\/trades(\/|$)/, permission: 'trades.view' },
+  { match: /^\/contacts(\/|$)/, permission: 'contacts.view' },
+  { match: /^\/inventory(\/|$)/, permission: 'inventory.view' },
+  { match: /^\/shares(\/|$)/, permission: 'shares.view' },
+  { match: /^\/ops-bank(\/|$)/, permission: 'opsbank.view' },
+  { match: /^\/shop-settings(\/|$)/, permission: 'sources.view' },
   { match: /^\/roles(\/|$)/, permission: 'roles.view' },
   { match: /^\/notifications(\/|$)/, permission: 'notifications.view' },
   { match: /^\/reports(\/|$)/, permission: 'reports.view' },
@@ -61,6 +67,13 @@ export const MODULE_LABELS: Record<string, string> = {
   audit: 'تاریخچه',
   settings: 'تنظیمات',
   backup: 'بکاپ',
+  contacts: 'مشتریان',
+  trades: 'خرید و فروش',
+  inventory: 'موجودی',
+  shares: 'لینک اشتراک',
+  opsbank: 'بانک عملیاتی',
+  sources: 'منابع جذب',
+  options: 'گزینه‌های کالا',
 };
 
 export const ACTION_LABELS: Record<string, string> = {

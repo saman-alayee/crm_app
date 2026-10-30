@@ -1,30 +1,36 @@
 /**
- * Resolve API base so PWA on phone (LAN IP / HTTPS domain) hits the right host.
- * Env NUXT_PUBLIC_API_BASE always wins when set to a non-localhost absolute URL.
+ * Resolve API base so the panel hits the right host.
+ * Behind nginx (VPS IP / domain): always same-origin `/api/v1` — never public :4000
+ * (API binds to 127.0.0.1 only).
  */
 export function resolveApiBase(configured?: string) {
   const fromEnv = (configured || '').trim().replace(/\/$/, '');
   if (import.meta.client) {
     const host = window.location.hostname;
     const isLocalHost = host === 'localhost' || host === '127.0.0.1';
-    if (fromEnv && !isLocalHost) {
-      // If page is opened via LAN/domain but env points to 127.0.0.1, rewrite host
+
+    // Local Nuxt dev: talk to API on :4000 unless env overrides
+    if (isLocalHost) {
+      return fromEnv || `${window.location.protocol}//${host}:4000/api/v1`;
+    }
+
+    // Production / LAN / public IP: use nginx reverse-proxy on same origin
+    if (fromEnv) {
       try {
         const u = new URL(fromEnv);
-        if (u.hostname === 'localhost' || u.hostname === '127.0.0.1') {
-          u.hostname = host;
-          // Keep http for LAN; if site is https, prefer same protocol only when not private IP rewrite of http API
-          return u.toString().replace(/\/$/, '');
+        if (u.hostname === 'localhost' || u.hostname === '127.0.0.1' || u.hostname !== host) {
+          return `${window.location.origin}/api/v1`;
         }
+        // Same host but maybe wrong port (e.g. :4000) — force same-origin path
+        if (u.port && u.port !== '' && u.port !== '80' && u.port !== '443' && u.port !== window.location.port) {
+          return `${window.location.origin}/api/v1`;
+        }
+        return fromEnv;
       } catch {
-        /* fall through */
+        return `${window.location.origin}/api/v1`;
       }
     }
-    if (!fromEnv || isLocalHost) {
-      if (fromEnv && isLocalHost) return fromEnv;
-      return `${window.location.protocol}//${host}:4000/api/v1`;
-    }
-    return fromEnv;
+    return `${window.location.origin}/api/v1`;
   }
   return fromEnv || 'http://127.0.0.1:4000/api/v1';
 }

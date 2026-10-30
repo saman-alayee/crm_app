@@ -98,6 +98,14 @@ model User {
   approvedSalaries  SalaryRequest[]     @relation("SalaryApprover")
   announcements     Announcement[]      @relation("AnnouncementAuthor")
   authoredNotes     EmployeeNote[]      @relation("NoteAuthor")
+  createdContacts   Contact[]           @relation("ContactCreator")
+  createdTrades     TradeRequest[]      @relation("TradeCreator")
+  createdInventory  InventoryItem[]     @relation("InventoryCreator")
+  createdShareLinks ShareLink[]         @relation("ShareLinkCreator")
+  moneyRequests     MoneyRequest[]      @relation("MoneyRequester")
+  reviewedMoney     MoneyRequest[]      @relation("MoneyReviewer")
+  editHistories     RequestEditHistory[] @relation("EditAuthor")
+  opsLimitLogs      OpsLimitChangeLog[] @relation("OpsLimitActor")
 
   @@index([isActive])
   @@map("users")
@@ -480,4 +488,331 @@ model EmployeeNote {
 
   @@index([employeeId, createdAt])
   @@map("employee_notes")
+}
+
+// ─── Shop CRM ────────────────────────────────────────────
+
+enum ProductKind {
+  PHONE
+  SIM
+}
+
+enum TradeSide {
+  BUY
+  SELL
+}
+
+enum TradeStatus {
+  OPEN
+  MATCHED
+  CLOSED
+  CANCELLED
+}
+
+enum MatchKind {
+  BUY_SELL
+  BUY_INVENTORY
+}
+
+enum MatchScore {
+  EXACT
+  SIMILAR
+}
+
+enum MoneyRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+enum MoneyReservationStatus {
+  RESERVED
+  CONSUMED
+  RELEASED
+}
+
+model AcquisitionSource {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  isActive  Boolean  @default(true)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  contacts Contact[]
+  trades   TradeRequest[]
+
+  @@map("acquisition_sources")
+}
+
+model Contact {
+  id                   String   @id @default(cuid())
+  fullName             String
+  mobile               String
+  acquisitionSourceId  String?
+  notes                String?
+  createdById          String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  acquisitionSource AcquisitionSource? @relation(fields: [acquisitionSourceId], references: [id], onDelete: SetNull)
+  createdBy         User?              @relation("ContactCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  trades            TradeRequest[]
+
+  @@unique([mobile])
+  @@index([fullName])
+  @@index([acquisitionSourceId])
+  @@map("contacts")
+}
+
+model ProductOption {
+  id        String      @id @default(cuid())
+  kind      ProductKind
+  category  String
+  value     String
+  isActive  Boolean     @default(true)
+  sortOrder Int         @default(0)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  @@unique([kind, category, value])
+  @@index([kind, category, isActive])
+  @@map("product_options")
+}
+
+model TradeRequest {
+  id                  String      @id @default(cuid())
+  side                TradeSide
+  productKind         ProductKind
+  status              TradeStatus @default(OPEN)
+  contactId           String?
+  customerName        String?
+  customerMobile      String?
+  acquisitionSourceId String?
+  specs               Json
+  quantity            Int         @default(1)
+  price               Decimal?
+  note                String?
+  createdById         String
+  closedAt            DateTime?
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+
+  contact           Contact?           @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  acquisitionSource AcquisitionSource? @relation(fields: [acquisitionSourceId], references: [id], onDelete: SetNull)
+  createdBy         User               @relation("TradeCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  matchesAsBuy      MatchSuggestion[]  @relation("MatchBuy")
+  matchesAsSell     MatchSuggestion[]  @relation("MatchSell")
+
+  @@index([side, status, productKind])
+  @@index([status, createdAt])
+  @@index([customerMobile])
+  @@map("trade_requests")
+}
+
+model InventoryItem {
+  id          String      @id @default(cuid())
+  productKind ProductKind
+  specs       Json
+  quantity    Int         @default(1)
+  costPrice   Decimal?
+  sellPrice   Decimal?
+  note        String?
+  isActive    Boolean     @default(true)
+  createdById String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  createdBy  User?              @relation("InventoryCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  matches    MatchSuggestion[]
+  shareItems ShareLinkItem[]
+
+  @@index([productKind, isActive])
+  @@index([quantity])
+  @@map("inventory_items")
+}
+
+model MatchSuggestion {
+  id              String      @id @default(cuid())
+  dedupeKey       String      @unique
+  kind            MatchKind
+  score           MatchScore
+  buyRequestId    String?
+  sellRequestId   String?
+  inventoryItemId String?
+  notifiedAt      DateTime?
+  dismissedAt     DateTime?
+  createdAt       DateTime    @default(now())
+
+  buyRequest    TradeRequest?  @relation("MatchBuy", fields: [buyRequestId], references: [id], onDelete: Cascade)
+  sellRequest   TradeRequest?  @relation("MatchSell", fields: [sellRequestId], references: [id], onDelete: Cascade)
+  inventoryItem InventoryItem? @relation(fields: [inventoryItemId], references: [id], onDelete: Cascade)
+
+  @@index([kind, createdAt])
+  @@index([buyRequestId])
+  @@map("match_suggestions")
+}
+
+model ShareLink {
+  id          String    @id @default(cuid())
+  token       String    @unique
+  title       String?
+  createdById String
+  isActive    Boolean   @default(true)
+  expiresAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  createdBy User            @relation("ShareLinkCreator", fields: [createdById], references: [id], onDelete: Cascade)
+  items     ShareLinkItem[]
+  events    ShareLinkEvent[]
+
+  @@index([isActive, createdAt])
+  @@map("share_links")
+}
+
+model ShareLinkItem {
+  id              String @id @default(cuid())
+  shareLinkId     String
+  inventoryItemId String
+
+  shareLink     ShareLink     @relation(fields: [shareLinkId], references: [id], onDelete: Cascade)
+  inventoryItem InventoryItem @relation(fields: [inventoryItemId], references: [id], onDelete: Cascade)
+
+  @@unique([shareLinkId, inventoryItemId])
+  @@map("share_link_items")
+}
+
+model ShareLinkEvent {
+  id          String   @id @default(cuid())
+  shareLinkId String
+  eventType   String
+  meta        Json?
+  createdAt   DateTime @default(now())
+
+  shareLink ShareLink @relation(fields: [shareLinkId], references: [id], onDelete: Cascade)
+
+  @@index([shareLinkId, createdAt])
+  @@map("share_link_events")
+}
+
+model OpsBankAccount {
+  id                String    @id @default(cuid())
+  name              String
+  bankName          String?
+  accountNumber     String?
+  iban              String?
+  isActive          Boolean   @default(true)
+  manualBalance     Decimal?
+  balanceUpdatedAt  DateTime?
+  dailyCapTotal     Decimal?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  methods       OpsPaymentMethod[]
+  limitLogs     OpsLimitChangeLog[]
+  moneyRequests MoneyRequest[]
+  reservations  MoneyReservation[]
+
+  @@index([isActive])
+  @@map("ops_bank_accounts")
+}
+
+model OpsPaymentMethod {
+  id               String   @id @default(cuid())
+  opsBankAccountId String
+  name             String
+  dailyCap         Decimal?
+  isActive         Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  opsBankAccount OpsBankAccount     @relation(fields: [opsBankAccountId], references: [id], onDelete: Cascade)
+  moneyRequests  MoneyRequest[]
+  reservations   MoneyReservation[]
+
+  @@index([opsBankAccountId, isActive])
+  @@map("ops_payment_methods")
+}
+
+model OpsLimitChangeLog {
+  id               String   @id @default(cuid())
+  opsBankAccountId String
+  changedById      String?
+  before           Json
+  after            Json
+  createdAt        DateTime @default(now())
+
+  opsBankAccount OpsBankAccount @relation(fields: [opsBankAccountId], references: [id], onDelete: Cascade)
+  changedBy      User?          @relation("OpsLimitActor", fields: [changedById], references: [id], onDelete: SetNull)
+
+  @@index([opsBankAccountId, createdAt])
+  @@map("ops_limit_change_logs")
+}
+
+model MoneyRequest {
+  id               String             @id @default(cuid())
+  opsBankAccountId String
+  paymentMethodId  String?
+  amount           Decimal
+  purpose          String?
+  status           MoneyRequestStatus @default(PENDING)
+  requestedById    String
+  reviewedById     String?
+  reviewedAt       DateTime?
+  rejectionReason  String?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+
+  opsBankAccount OpsBankAccount      @relation(fields: [opsBankAccountId], references: [id], onDelete: Restrict)
+  paymentMethod  OpsPaymentMethod?   @relation(fields: [paymentMethodId], references: [id], onDelete: SetNull)
+  requestedBy    User                @relation("MoneyRequester", fields: [requestedById], references: [id], onDelete: Restrict)
+  reviewedBy     User?               @relation("MoneyReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  reservation    MoneyReservation?
+
+  @@index([status, createdAt])
+  @@index([opsBankAccountId, status])
+  @@map("money_requests")
+}
+
+model MoneyReservation {
+  id               String                  @id @default(cuid())
+  moneyRequestId   String                  @unique
+  opsBankAccountId String
+  paymentMethodId  String?
+  amount           Decimal
+  status           MoneyReservationStatus  @default(RESERVED)
+  dayKey           String
+  createdAt        DateTime                @default(now())
+  releasedAt       DateTime?
+  consumedAt       DateTime?
+
+  moneyRequest   MoneyRequest      @relation(fields: [moneyRequestId], references: [id], onDelete: Cascade)
+  opsBankAccount OpsBankAccount    @relation(fields: [opsBankAccountId], references: [id], onDelete: Restrict)
+  paymentMethod  OpsPaymentMethod? @relation(fields: [paymentMethodId], references: [id], onDelete: SetNull)
+
+  @@index([opsBankAccountId, dayKey, status])
+  @@index([paymentMethodId, dayKey, status])
+  @@map("money_reservations")
+}
+
+model RequestEditHistory {
+  id         String    @id @default(cuid())
+  entityType String
+  entityId   String
+  editedById String
+  before     Json
+  after      Json
+  diffText   String
+  sensitive  Boolean   @default(false)
+  ackedAt    DateTime?
+  ackedById  String?
+  createdAt  DateTime  @default(now())
+
+  editedBy User @relation("EditAuthor", fields: [editedById], references: [id], onDelete: Restrict)
+
+  @@index([entityType, entityId, createdAt])
+  @@index([sensitive, ackedAt])
+  @@map("request_edit_histories")
 }

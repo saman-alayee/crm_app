@@ -107,6 +107,8 @@ useHead({ title: 'مرخصی' });
 
 <template>
   <div>
+    <AppPageNav />
+    <AppPageNav />
     <UiPageHeader
       eyebrow="عملیات پرسنلی"
       title="درخواست‌های مرخصی"

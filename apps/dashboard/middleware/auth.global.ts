@@ -1,7 +1,7 @@
 import { requiredPermissionForPath } from '~/utils/routePermissions';
 
 export default defineNuxtRouteMiddleware(async (to) => {
-  if (to.path === '/login') return;
+  if (to.path === '/login' || to.path.startsWith('/p/')) return;
 
   const auth = useAuthStore();
   auth.hydrate();

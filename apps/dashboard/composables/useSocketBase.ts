@@ -10,7 +10,10 @@ export function resolveSocketBase(configured?: string) {
     return u.origin;
   } catch {
     if (import.meta.client) {
-      return `${window.location.protocol}//${window.location.hostname}:4000`;
+      const host = window.location.hostname;
+      const isLocal = host === 'localhost' || host === '127.0.0.1';
+      // Public deploy: socket.io is proxied by nginx on :80
+      return isLocal ? `${window.location.protocol}//${host}:4000` : window.location.origin;
     }
     return 'http://127.0.0.1:4000';
   }

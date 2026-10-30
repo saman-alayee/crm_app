@@ -226,6 +226,16 @@
     border: 1px solid color-mix(in srgb, var(--hr-border) 55%, transparent);
     box-shadow: 0 12px 32px -16px rgba(20, 40, 60, 0.35);
   }
+  /* Portaled calendar escapes .card { overflow:hidden } clipping */
+  .jdp__pop--portal {
+    position: fixed;
+    inset: auto;
+    top: auto;
+    inset-inline-start: auto;
+    max-height: min(24rem, calc(100vh - 1rem));
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+  }
   .jdp__head {
     display: flex;
     align-items: center;

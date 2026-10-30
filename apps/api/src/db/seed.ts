@@ -1,6 +1,8 @@
 import bcrypt from 'bcryptjs';
 import {
   ALL_PERMISSION_KEYS,
+  DEFAULT_ACQUISITION_SOURCES,
+  DEFAULT_PRODUCT_OPTIONS,
   PERMISSION_CATALOG,
   ROLE_DEFAULT_PERMISSIONS,
   SYSTEM_ROLES,
@@ -158,6 +160,25 @@ async function seedThemeDefaults() {
   }
 }
 
+async function seedShopDefaults() {
+  for (const [i, name] of DEFAULT_ACQUISITION_SOURCES.entries()) {
+    await prisma.acquisitionSource.upsert({
+      where: { name },
+      create: { name, sortOrder: i + 1, isActive: true },
+      update: { sortOrder: i + 1 },
+    });
+  }
+  for (const opt of DEFAULT_PRODUCT_OPTIONS) {
+    await prisma.productOption.upsert({
+      where: {
+        kind_category_value: { kind: opt.kind, category: opt.category, value: opt.value },
+      },
+      create: opt,
+      update: { sortOrder: opt.sortOrder, isActive: true },
+    });
+  }
+}
+
 async function main() {
   console.log('Seeding permissions & roles...');
   await seedPermissions();
@@ -165,6 +186,7 @@ async function main() {
   const ownerUser = await seedOwnerUser(owner.id);
   await seedDepartments();
   await seedThemeDefaults();
+  await seedShopDefaults();
   console.log(`Owner ready: ${ownerUser.username} (${ownerUser.id})`);
   console.log(`Permissions catalog: ${ALL_PERMISSION_KEYS.length}`);
   console.log('Seed complete.');

@@ -13,6 +13,13 @@ export const MODULES = [
   'audit',
   'settings',
   'backup',
+  'contacts',
+  'trades',
+  'inventory',
+  'shares',
+  'opsbank',
+  'sources',
+  'options',
 ] as const;
 
 export const ACTIONS = [
@@ -82,14 +89,48 @@ export const PERMISSION_CATALOG: ReadonlyArray<{
   { module: 'settings', action: 'view', description: 'مشاهده تنظیمات' },
   { module: 'settings', action: 'edit', description: 'ویرایش تنظیمات و تم' },
   { module: 'backup', action: 'export', description: 'دانلود بکاپ دیتابیس' },
+
+  { module: 'contacts', action: 'view', description: 'مشاهده مشتریان/مخاطبین' },
+  { module: 'contacts', action: 'create', description: 'ثبت مشتری' },
+  { module: 'contacts', action: 'edit', description: 'ویرایش مشتری' },
+  { module: 'contacts', action: 'delete', description: 'حذف مشتری' },
+
+  { module: 'trades', action: 'view', description: 'مشاهده درخواست خرید/فروش' },
+  { module: 'trades', action: 'create', description: 'ثبت درخواست خرید/فروش' },
+  { module: 'trades', action: 'edit', description: 'ویرایش درخواست خرید/فروش' },
+  { module: 'trades', action: 'approve', description: 'بستن/تطبیق درخواست' },
+
+  { module: 'inventory', action: 'view', description: 'مشاهده موجودی' },
+  { module: 'inventory', action: 'create', description: 'ثبت موجودی' },
+  { module: 'inventory', action: 'edit', description: 'ویرایش موجودی' },
+  { module: 'inventory', action: 'view_sensitive', description: 'مشاهده قیمت خرید موجودی' },
+  { module: 'inventory', action: 'delete', description: 'حذف/غیرفعال موجودی' },
+
+  { module: 'shares', action: 'view', description: 'مشاهده لینک‌های اشتراک' },
+  { module: 'shares', action: 'create', description: 'ایجاد لینک اشتراک' },
+  { module: 'shares', action: 'edit', description: 'ویرایش/غیرفعال لینک اشتراک' },
+
+  { module: 'opsbank', action: 'view', description: 'مشاهده حساب‌های عملیاتی' },
+  { module: 'opsbank', action: 'create', description: 'ثبت حساب/روش پرداخت عملیاتی' },
+  { module: 'opsbank', action: 'edit', description: 'ویرایش سقف و موجودی عملیاتی' },
+  { module: 'opsbank', action: 'approve', description: 'تأیید درخواست وجه عملیاتی' },
+  { module: 'opsbank', action: 'reject', description: 'رد درخواست وجه عملیاتی' },
+  { module: 'opsbank', action: 'view_sensitive', description: 'مشاهده شبا/موجودی عملیاتی' },
+
+  { module: 'sources', action: 'view', description: 'مشاهده منابع جذب' },
+  { module: 'sources', action: 'create', description: 'ثبت منبع جذب' },
+  { module: 'sources', action: 'edit', description: 'ویرایش منبع جذب' },
+
+  { module: 'options', action: 'view', description: 'مشاهده گزینه‌های گوشی/سیم' },
+  { module: 'options', action: 'edit', description: 'مدیریت گزینه‌های گوشی/سیم' },
 ];
 
 export function permissionKey(module: Module, action: Action): PermissionKey {
   return `${module}.${action}`;
 }
 
-export const ALL_PERMISSION_KEYS: PermissionKey[] = PERMISSION_CATALOG.map(
-  (p) => permissionKey(p.module, p.action)
+export const ALL_PERMISSION_KEYS: PermissionKey[] = PERMISSION_CATALOG.map((p) =>
+  permissionKey(p.module, p.action)
 );
 
 export const SYSTEM_ROLES = {
@@ -101,11 +142,44 @@ export const SYSTEM_ROLES = {
   EMPLOYEE: { name: 'کارمند', slug: 'employee', description: 'دسترسی محدود به امور شخصی' },
 } as const;
 
-/** Roles that always resolve to the full permission catalog */
 export const FULL_ACCESS_ROLE_SLUGS = new Set<string>([
   SYSTEM_ROLES.OWNER.slug,
   SYSTEM_ROLES.ADMIN.slug,
 ]);
+
+const SHOP_STAFF: PermissionKey[] = [
+  'contacts.view',
+  'contacts.create',
+  'contacts.edit',
+  'trades.view',
+  'trades.create',
+  'trades.edit',
+  'inventory.view',
+  'inventory.create',
+  'inventory.edit',
+  'shares.view',
+  'shares.create',
+  'shares.edit',
+  'sources.view',
+  'options.view',
+  'opsbank.view',
+  'opsbank.create',
+];
+
+const SHOP_MANAGER: PermissionKey[] = [
+  ...SHOP_STAFF,
+  'trades.approve',
+  'inventory.view_sensitive',
+  'inventory.delete',
+  'contacts.delete',
+  'sources.create',
+  'sources.edit',
+  'options.edit',
+  'opsbank.edit',
+  'opsbank.approve',
+  'opsbank.reject',
+  'opsbank.view_sensitive',
+];
 
 export const ROLE_DEFAULT_PERMISSIONS: Record<string, readonly PermissionKey[]> = {
   [SYSTEM_ROLES.OWNER.slug]: ALL_PERMISSION_KEYS,
@@ -139,6 +213,7 @@ export const ROLE_DEFAULT_PERMISSIONS: Record<string, readonly PermissionKey[]> 
     'departments.delete',
     'reports.view',
     'audit.view',
+    ...SHOP_MANAGER,
   ],
   [SYSTEM_ROLES.MANAGER.slug]: [
     'dashboard.view',
@@ -152,6 +227,7 @@ export const ROLE_DEFAULT_PERMISSIONS: Record<string, readonly PermissionKey[]> 
     'notifications.view',
     'announcements.view',
     'departments.view',
+    ...SHOP_MANAGER,
   ],
   [SYSTEM_ROLES.ACCOUNTANT.slug]: [
     'dashboard.view',
@@ -167,6 +243,19 @@ export const ROLE_DEFAULT_PERMISSIONS: Record<string, readonly PermissionKey[]> 
     'notifications.view',
     'reports.view',
     'reports.export',
+    'opsbank.view',
+    'opsbank.create',
+    'opsbank.edit',
+    'opsbank.approve',
+    'opsbank.reject',
+    'opsbank.view_sensitive',
+    'contacts.view',
+    'trades.view',
+    'inventory.view',
+    'inventory.view_sensitive',
+    'shares.view',
+    'sources.view',
+    'options.view',
   ],
   [SYSTEM_ROLES.EMPLOYEE.slug]: [
     'dashboard.view',
@@ -180,5 +269,6 @@ export const ROLE_DEFAULT_PERMISSIONS: Record<string, readonly PermissionKey[]> 
     'tasks.view',
     'notifications.view',
     'announcements.view',
+    ...SHOP_STAFF,
   ],
 };
