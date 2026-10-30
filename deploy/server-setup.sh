@@ -304,6 +304,13 @@ sudo -u "$APP_USER" bash -lc "cd '$APP_DIR/apps/api' && DATABASE_URL=\"file:${DA
   || sudo -u "$APP_USER" bash -lc "cd '$APP_DIR' && DATABASE_URL=\"file:${DATA_DIR}/prod.db\" node apps/api/scripts/create-admin-user.mjs saman '$SAMAN_PASS' سامان ادمین" \
   || echo "WARN: could not create saman admin (seed/scripts missing?)"
 
+echo "==> Post-install harden & cleanup"
+if [ -f "$APP_DIR/deploy/harden-cleanup.sh" ]; then
+  bash "$APP_DIR/deploy/harden-cleanup.sh" || true
+elif [ -f /tmp/crm-harden.sh ]; then
+  bash /tmp/crm-harden.sh || true
+fi
+
 echo "==> Done"
 echo "URL: http://${PUBLIC_HOST}/"
 if [ -f "$APP_ROOT/CREDENTIALS.txt" ]; then

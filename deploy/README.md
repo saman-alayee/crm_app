@@ -45,6 +45,22 @@ bash /tmp/crm_app/deploy/server-setup.sh
 - هدرهای امنیتی Nginx
 - rate-limit روی `/api/`
 
+## پاک‌سازی + امنیت + بهینه‌سازی
+
+بعد از نصب (یا هر وقت):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/saman-alayee/crm_app/main/deploy/harden-cleanup.sh -o /tmp/crm-harden.sh
+bash /tmp/crm-harden.sh
+```
+
+این اسکریپت:
+- پوشهٔ سنگین `sources/` و فایل‌های QA/موقت را حذف می‌کند
+- مجوز `.env` و دیتابیس را قفل می‌کند (`600` / `640`)
+- API و Nuxt را فقط روی `127.0.0.1` نگه می‌دارد
+- UFW (فقط SSH+HTTP)، fail2ban، هدرهای Nginx و rate-limit را اعمال می‌کند
+- لاگ‌ها را rotate و کش npm/apt را پاک می‌کند
+
 ## بدون SSL
 
 طبق درخواست، فقط HTTP روی IP بالا می‌آید. بعداً برای دامنه می‌توان Certbot اضافه کرد.
