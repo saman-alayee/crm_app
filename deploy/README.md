@@ -30,7 +30,10 @@ bash /tmp/crm_app/deploy/server-setup.sh
 ```
 
 آدرس پنل: `http://YOUR_IP/`  
-ورود اولیه: `owner` + رمز داخل `/opt/crm/CREDENTIALS.txt`
+
+ورود:
+- `owner` + رمز داخل `/opt/crm/CREDENTIALS.txt`
+- ادمین: `saman` / `Saman@Crm2026!` (فایل: `/opt/crm/ADMIN_SAMAN.txt`)
 
 ## امنیت اعمال‌شده
 
