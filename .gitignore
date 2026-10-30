@@ -18,3 +18,6 @@ apps/api/uploads/
 *.db-journal
 *.db.gz
 smoke-result.txt
+deploy/_node_cache/
+deploy/_*.txt
+deploy/_vps_check_out.txt

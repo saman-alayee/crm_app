@@ -1,0 +1,457 @@
+{
+  "at": "2026-10-30T14:32:07.306Z",
+  "bugs": [
+    {
+      "level": "medium",
+      "msg": "bank create 404",
+      "user": "owner",
+      "message": "{\"success\":false,\"message\":\"مسیر یافت نشد\",\"code\":\"NOT_FOUND\"}"
+    }
+  ],
+  "results": [
+    {
+      "user": "owner",
+      "role": [
+        "owner"
+      ],
+      "permCount": 46,
+      "routes": {
+        "/dashboard/summary": {
+          "status": 200,
+          "verdict": "ok",
+          "allowed": true
+        },
+        "/employees": {
+          "status": 200,
+          "verdict": "ok",
+          "allowed": true
+        },
+        "/leave-requests": {
+          "status": 200,
+          "verdict": "ok",
+          "allowed": true
+        },
+        "/salary-requests": {
+          "status": 200,
+          "verdict": "ok",
+          "allowed": true
+        },
+        "/bank-accounts": {
+          "status": 200,
+          "verdict": "ok",
+          "allowed": true
+        },
+        "/tasks": {
+          "status": 200,
+          "verdict": "ok",
+          "allowed": true
+        },
+        "/roles": {
+          "status": 200,
+          "verdict": "ok",
+          "allowed": true
+        },
+        "/notifications": {
+          "status": 200,
+          "verdict": "ok",
+          "allowed": true
+        },
+        "/announcements": {
+          "status": 200,
+          "verdict": "ok",
+          "allowed": true
+        },
+        "/departments": {
+          "status": 200,
+          "verdict": "ok",
+          "allowed": true
+        },
+        "/reports/employees": {
+          "status": 200,
+          "verdict": "ok",
+          "allowed": true
+        },
+        "/audit-logs": {
+          "status": 200,
+          "verdict": "ok",
+          "allowed": true
+        },
+        "/settings": {
+          "status": 200,
+          "verdict": "ok",
+          "allowed": true
+        }
+      }
+    },
+    {
+      "user": "admin_qa",
+      "role": [
+        "admin"
+      ],
+      "permCount": 46,
+      "routes": {
+        "/dashboard/summary": {
+          "status": 200,
+          "verdict": "ok",
+          "allowed": true
+        },
+        "/employees": {
+          "status": 200,
+          "verdict": "ok",
+          "allowed": true
+        },
+        "/leave-requests": {
+          "status": 200,
+          "verdict": "ok",
+          "allowed": true
+        },
+        "/salary-requests": {
+          "status": 200,
+          "verdict": "ok",
+          "allowed": true
+        },
+        "/bank-accounts": {
+          "status": 200,
+          "verdict": "ok",
+          "allowed": true
+        },
+        "/tasks": {
+          "status": 200,
+          "verdict": "ok",
+          "allowed": true
+        },
+        "/roles": {
+          "status": 200,
+          "verdict": "ok",
+          "allowed": true
+        },
+        "/notifications": {
+          "status": 200,
+          "verdict": "ok",
+          "allowed": true
+        },
+        "/announcements": {
+          "status": 200,
+          "verdict": "ok",
+          "allowed": true
+        },
+        "/departments": {
+          "status": 200,
+          "verdict": "ok",
+          "allowed": true
+        },
+        "/reports/employees": {
+          "status": 200,
+          "verdict": "ok",
+          "allowed": true
+        },
+        "/audit-logs": {
+          "status": 200,
+          "verdict": "ok",
+          "allowed": true
+        },
+        "/settings": {
+          "status": 200,
+          "verdict": "ok",
+          "allowed": true
+        }
+      }
+    },
+    {
+      "user": "hr_qa",
+      "role": [
+        "hr-manager"
+      ],
+      "permCount": 28,
+      "routes": {
+        "/dashboard/summary": {
+          "status": 200,
+          "verdict": "ok",
+          "allowed": true
+        },
+        "/employees": {
+          "status": 200,
+          "verdict": "ok",
+          "allowed": true
+        },
+        "/leave-requests": {
+          "status": 200,
+          "verdict": "ok",
+          "allowed": true
+        },
+        "/salary-requests": {
+          "status": 200,
+          "verdict": "ok",
+          "allowed": true
+        },
+        "/bank-accounts": {
+          "status": 403,
+          "verdict": "ok",
+          "allowed": false
+        },
+        "/tasks": {
+          "status": 200,
+          "verdict": "ok",
+          "allowed": true
+        },
+        "/roles": {
+          "status": 403,
+          "verdict": "ok",
+          "allowed": false
+        },
+        "/notifications": {
+          "status": 200,
+          "verdict": "ok",
+          "allowed": true
+        },
+        "/announcements": {
+          "status": 200,
+          "verdict": "ok",
+          "allowed": true
+        },
+        "/departments": {
+          "status": 200,
+          "verdict": "ok",
+          "allowed": true
+        },
+        "/reports/employees": {
+          "status": 200,
+          "verdict": "ok",
+          "allowed": true
+        },
+        "/audit-logs": {
+          "status": 200,
+          "verdict": "ok",
+          "allowed": true
+        },
+        "/settings": {
+          "status": 403,
+          "verdict": "ok",
+          "allowed": false
+        }
+      }
+    },
+    {
+      "user": "manager_qa",
+      "role": [
+        "manager"
+      ],
+      "permCount": 11,
+      "routes": {
+        "/dashboard/summary": {
+          "status": 200,
+          "verdict": "ok",
+          "allowed": true
+        },
+        "/employees": {
+          "status": 200,
+          "verdict": "ok",
+          "allowed": true
+        },
+        "/leave-requests": {
+          "status": 200,
+          "verdict": "ok",
+          "allowed": true
+        },
+        "/salary-requests": {
+          "status": 403,
+          "verdict": "ok",
+          "allowed": false
+        },
+        "/bank-accounts": {
+          "status": 403,
+          "verdict": "ok",
+          "allowed": false
+        },
+        "/tasks": {
+          "status": 200,
+          "verdict": "ok",
+          "allowed": true
+        },
+        "/roles": {
+          "status": 403,
+          "verdict": "ok",
+          "allowed": false
+        },
+        "/notifications": {
+          "status": 200,
+          "verdict": "ok",
+          "allowed": true
+        },
+        "/announcements": {
+          "status": 200,
+          "verdict": "ok",
+          "allowed": true
+        },
+        "/departments": {
+          "status": 200,
+          "verdict": "ok",
+          "allowed": true
+        },
+        "/reports/employees": {
+          "status": 403,
+          "verdict": "ok",
+          "allowed": false
+        },
+        "/audit-logs": {
+          "status": 403,
+          "verdict": "ok",
+          "allowed": false
+        },
+        "/settings": {
+          "status": 403,
+          "verdict": "ok",
+          "allowed": false
+        }
+      }
+    },
+    {
+      "user": "accountant_qa",
+      "role": [
+        "accountant"
+      ],
+      "permCount": 13,
+      "routes": {
+        "/dashboard/summary": {
+          "status": 200,
+          "verdict": "ok",
+          "allowed": true
+        },
+        "/employees": {
+          "status": 200,
+          "verdict": "ok",
+          "allowed": true
+        },
+        "/leave-requests": {
+          "status": 403,
+          "verdict": "ok",
+          "allowed": false
+        },
+        "/salary-requests": {
+          "status": 200,
+          "verdict": "ok",
+          "allowed": true
+        },
+        "/bank-accounts": {
+          "status": 200,
+          "verdict": "ok",
+          "allowed": true
+        },
+        "/tasks": {
+          "status": 403,
+          "verdict": "ok",
+          "allowed": false
+        },
+        "/roles": {
+          "status": 403,
+          "verdict": "ok",
+          "allowed": false
+        },
+        "/notifications": {
+          "status": 200,
+          "verdict": "ok",
+          "allowed": true
+        },
+        "/announcements": {
+          "status": 403,
+          "verdict": "ok",
+          "allowed": false
+        },
+        "/departments": {
+          "status": 403,
+          "verdict": "ok",
+          "allowed": false
+        },
+        "/reports/employees": {
+          "status": 200,
+          "verdict": "ok",
+          "allowed": true
+        },
+        "/audit-logs": {
+          "status": 403,
+          "verdict": "ok",
+          "allowed": false
+        },
+        "/settings": {
+          "status": 403,
+          "verdict": "ok",
+          "allowed": false
+        }
+      }
+    },
+    {
+      "user": "employee_qa",
+      "role": [
+        "employee"
+      ],
+      "permCount": 11,
+      "routes": {
+        "/dashboard/summary": {
+          "status": 200,
+          "verdict": "ok",
+          "allowed": true
+        },
+        "/employees": {
+          "status": 403,
+          "verdict": "ok",
+          "allowed": false
+        },
+        "/leave-requests": {
+          "status": 200,
+          "verdict": "ok",
+          "allowed": true
+        },
+        "/salary-requests": {
+          "status": 200,
+          "verdict": "ok",
+          "allowed": true
+        },
+        "/bank-accounts": {
+          "status": 200,
+          "verdict": "ok",
+          "allowed": true
+        },
+        "/tasks": {
+          "status": 200,
+          "verdict": "ok",
+          "allowed": true
+        },
+        "/roles": {
+          "status": 403,
+          "verdict": "ok",
+          "allowed": false
+        },
+        "/notifications": {
+          "status": 200,
+          "verdict": "ok",
+          "allowed": true
+        },
+        "/announcements": {
+          "status": 200,
+          "verdict": "ok",
+          "allowed": true
+        },
+        "/departments": {
+          "status": 403,
+          "verdict": "ok",
+          "allowed": false
+        },
+        "/reports/employees": {
+          "status": 403,
+          "verdict": "ok",
+          "allowed": false
+        },
+        "/audit-logs": {
+          "status": 403,
+          "verdict": "ok",
+          "allowed": false
+        },
+        "/settings": {
+          "status": 403,
+          "verdict": "ok",
+          "allowed": false
+        }
+      }
+    }
+  ]
+}
